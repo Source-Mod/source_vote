@@ -18,4 +18,5 @@ Creates campaign vote system when versus ended
 
 ## Compiling
 
-- Use the compiler from sourcemod to compile the left_4_rank.sp
+- Use the compiler from sourcemod to compile the left_4_vote.sp
+
