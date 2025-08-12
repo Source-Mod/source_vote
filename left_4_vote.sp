@@ -6,7 +6,7 @@ public Plugin myinfo =
     author      = "LeandroTheDev",
     description = "Player vote system",
     version     = "1.0",
-    url         = "https://github.com/LeandroTheDev/left_4_rank"
+    url         = "https://github.com/LeandroTheDev/left_4_vote"
 };
 
 int  mapCount = 0;
@@ -329,4 +329,5 @@ stock bool IsValidClient(client)
         return false;
     }
     return IsClientInGame(client);
+
 }
