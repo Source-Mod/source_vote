@@ -27,7 +27,12 @@ public void OnPluginStart()
         }
     }
 
-    char path[PLATFORM_MAX_PATH] = "addons/sourcemod/configs/left_4_vote.cfg";
+    char path[PLATFORM_MAX_PATH];
+    if (!GetCommandLineParam("-voteFile", path, sizeof(path)))
+    {
+        PrintToServer("[Left 4 Vote] Missing -voteFile parameter, using default: addons/sourcemod/configs/left_4_vote.cfg");
+        path = "addons/sourcemod/configs/left_4_vote.cfg";
+    }
 
     if (!FileExists(path))
     {
@@ -103,7 +108,19 @@ public void OnPluginStart()
         }
     }
 
-    HookEventEx("versus_match_finished", RoundEnd, EventHookMode_Post);
+    char gamemode[64];
+    GetConVarString(FindConVar("mp_gamemode"), gamemode, sizeof(gamemode));
+    if (StrEqual(gamemode, "versus"))
+    {
+        PrintToServer("[Left 4 Vote] versus detected");
+        HookEventEx("versus_match_finished", RoundEndVersus, EventHookMode_Post);
+    }
+    else if (StrEqual(gamemode, "mutation15")) {
+        PrintToServer("[Left 4 Vote] survival versus detected");
+        HookEventEx("round_end", RoundEndSurvivalVersus, EventHookMode_Post);
+    }
+    else
+        PrintToServer("[Left 4 Rank] Unsoported gamemode: %s", gamemode);
 
     RegConsoleCmd("startvote", CommandStartVote, "Start voting system");
 
@@ -136,8 +153,36 @@ int  g_SelectedIndices[MAX_VOTE_MAPS];    // Array to hold the randomly selected
 int  g_SelectedCount = 0;                 // Number of maps selected for the vote
 int  g_Votes[MAX_VOTE_MAPS];              // Map Votes
 char g_MapCode[64];                       // Voted map code
-public void RoundEnd(Event event, const char[] name, bool dontBroadcast)
+public void RoundEndVersus(Event event, const char[] name, bool dontBroadcast)
 {
+    GenerateMapVote();
+
+    InitMapVote();
+}
+
+static bool shouldMapVote = false;
+
+public void RoundEndSurvivalVersus(Event event, const char[] name, bool dontBroadcast)
+{
+    int reason = event.GetInt("reason");
+
+    // Restart from hibernation
+    if (reason == 8) return;
+
+    // Scenario Restart
+    if (reason == 0) return;
+
+    // Chapter ended
+    if (reason == 6) return;
+
+    if (!shouldMapVote)
+    {
+        shouldMapVote = true;
+        PrintToServer("[Left 4 Vote] First round ended, next round map vote will be called");
+        return;
+    }
+    shouldMapVote = false;
+
     GenerateMapVote();
 
     InitMapVote();
