@@ -13,6 +13,7 @@ int  mapCount = 0;
 char mapCodes[99][64];
 char mapNames[99][64];
 
+char gamemode[64];
 bool shouldDebug = false;
 
 public void OnPluginStart()
@@ -108,7 +109,6 @@ public void OnPluginStart()
         }
     }
 
-    char gamemode[64];
     GetConVarString(FindConVar("mp_gamemode"), gamemode, sizeof(gamemode));
     if (StrEqual(gamemode, "versus"))
     {
@@ -148,11 +148,6 @@ public Action CommandStartVote(int client, int args)
 }
 
 /// REGION EVENTS
-#define MAX_VOTE_MAPS 9
-int  g_SelectedIndices[MAX_VOTE_MAPS];    // Array to hold the randomly selected map indices for the vote
-int  g_SelectedCount = 0;                 // Number of maps selected for the vote
-int  g_Votes[MAX_VOTE_MAPS];              // Map Votes
-char g_MapCode[64];                       // Voted map code
 public void RoundEndVersus(Event event, const char[] name, bool dontBroadcast)
 {
     GenerateMapVote();
@@ -188,50 +183,61 @@ public void RoundEndSurvivalVersus(Event event, const char[] name, bool dontBroa
     InitMapVote();
 }
 
+#define MAX_VOTE_MAPS 9
+int  availableMapIndexesVotes[MAX_VOTE_MAPS];
+int  votes[MAX_VOTE_MAPS];
+char votedMapCode[64];
+
 public void GenerateMapVote()
 {
-    // Reset previous votes
+    // Reset all votes
     for (int i = 0; i < MAX_VOTE_MAPS; i++)
     {
-        g_Votes[i] = 0;
+        availableMapIndexesVotes[i] = -1;
+        votes[i]                    = 0;
     }
 
     if (shouldDebug)
         PrintToServer("[Left 4 Vote] Cleaned votes variables");
 
-    // Randomly select maps once for all players
-    g_SelectedCount = (mapCount < MAX_VOTE_MAPS) ? mapCount : MAX_VOTE_MAPS;
-
-    if (shouldDebug)
-        PrintToServer("[Left 4 Vote] Total maps: %d", g_SelectedCount);
-
-    int count = 0;
-
-    while (count < g_SelectedCount)
+    // Map count is lower than MAX_VOTE_MAPS
+    // so we add all available maps index to the variable
+    if (MAX_VOTE_MAPS >= mapCount)
     {
-        int  randIndex       = GetRandomInt(0, mapCount - 1);
-
-        // Check if this map index has already been selected
-        bool alreadySelected = false;
-        for (int i = 0; i < count; i++)
+        for (int i = 0; i < mapCount; i++)
         {
-            if (g_SelectedIndices[i] == randIndex)
-            {
-                alreadySelected = true;
-                break;
-            }
-        }
-
-        // If not already selected, add to the list
-        if (!alreadySelected)
-        {
-            g_SelectedIndices[count] = randIndex;
-            count++;
-
-            if (shouldDebug)
-                PrintToServer("[Left 4 Vote] New map added to random: %s", mapNames[randIndex]);
+            availableMapIndexesVotes[i] = i;
         }
     }
+    // Random pickup map indexs
+    else {
+        int availableMapIndexesVotesCount = 0;
+        for (int i = 0; i < mapCount; i++)
+        {
+            int  randomIndex = GetRandomInt(0, mapCount);
+            bool exist       = false;
+            for (int j = 0; j < MAX_VOTE_MAPS; j++)
+            {
+                if (availableMapIndexesVotes[j] == randomIndex)
+                {
+                    exist = true;
+                    break;
+                }
+            }
+
+            if (exist) continue;
+            availableMapIndexesVotes[availableMapIndexesVotesCount] = randomIndex;
+            availableMapIndexesVotesCount++;
+
+            if (shouldDebug)
+                PrintToServer("[Left 4 Vote] New map added to random: %s", mapNames[randomIndex]);
+
+            if (availableMapIndexesVotesCount >= MAX_VOTE_MAPS - 1) break;
+        }
+    }
+
+    if (shouldDebug)
+        PrintToServer("[Left 4 Vote] Maps randomized");
 }
 
 public void InitMapVote()
@@ -249,23 +255,57 @@ public void InitMapVote()
         Menu menu = new Menu(VoteMenuHandler);
         menu.SetTitle("Map Vote");
 
-        // Add each randomly selected map to the menu with IDs 1 to g_SelectedCount
-        for (int j = 0; j < g_SelectedCount; j++)
+        for (int j = 0; j < MAX_VOTE_MAPS; j++)
         {
-            int  idx = g_SelectedIndices[j];
+            // Generate Rematch
+            if (j == 0)
+            {
+                // Survival Versus create the Rematch button
+                if (StrEqual(gamemode, "mutation15") && mapCount >= MAX_VOTE_MAPS)
+                {
+                    char mapName[64];
+                    GetCurrentMap(mapName, sizeof(mapName));
+
+                    int mapIndex = -1;
+                    for (int x = 0; x < mapCount; x++)
+                    {
+                        if (StrEqual(mapNames[x], mapName))
+                        {
+                            mapIndex = x;
+                            break;
+                        }
+                    }
+
+                    // Check if we can find the actual map index
+                    if (mapIndex != -1)
+                    {
+                        char menuId[2];
+                        Format(menuId, sizeof(menuId), "%d", j + 1);
+
+                        menu.AddItem(menuId, mapNames[mapIndex]);
+
+                        if (shouldDebug)
+                            PrintToServer("[Left 4 Vote] Rematch created for client: %d, map: %s", client, mapNames[mapIndex]);
+                        continue;
+                    }
+                }
+            }
+
+            int index = availableMapIndexesVotes[j];
+            if (index == -1) break;
+
             char menuId[2];
             Format(menuId, sizeof(menuId), "%d", j + 1);
 
-            menu.AddItem(menuId, mapNames[idx]);
+            menu.AddItem(menuId, mapNames[index]);
         }
 
         menu.Display(client, 5);    // Show the menu with a 5 second timeout
 
-        if (shouldDebug)
-            PrintToServer("[Left 4 Vote] Menu generated for: %d", client);
+        PrintToServer("[Left 4 Vote] Menu generated for: %d", client);
     }
 
-    CreateTimer(7.0, VoteFinish, 0, TIMER_FLAG_NO_MAPCHANGE);
+    CreateTimer(5.0, VoteFinish, 0, TIMER_FLAG_NO_MAPCHANGE);
 }
 
 public int VoteMenuHandler(Menu menu, MenuAction action, int client, int param)
@@ -276,38 +316,29 @@ public int VoteMenuHandler(Menu menu, MenuAction action, int client, int param)
         menu.GetItem(param, info, sizeof(info));
 
         int selection = StringToInt(info) - 1;
+        votes[selection]++;
 
-        // Check if the selection is valid
-        if (selection <= g_SelectedCount)
-        {
-            g_Votes[selection]++;
+        int  mapIndex = availableMapIndexesVotes[selection - 1];
+        char chosenMapName[64];
+        strcopy(chosenMapName, sizeof(chosenMapName), mapNames[mapIndex]);
 
-            int  mapIndex = g_SelectedIndices[selection];
-            char chosenMapName[64];
-            strcopy(chosenMapName, sizeof(chosenMapName), mapNames[mapIndex]);
-
-            PrintToChat(client, "Voted #%d: %s", selection, chosenMapName);
-            PrintToServer("[Left 4 Vote] %d voted to: %s", client, mapCodes[mapIndex]);
-        }
-        else
-        {
-            PrintToChat(client, "Invalid selection.");
-        }
+        PrintToChat(client, "Voted #%d: %s", selection, chosenMapName);
+        PrintToServer("[Left 4 Vote] %d voted to: %s", client, mapCodes[mapIndex]);
     }
     return 0;
 }
 
 public Action VoteFinish(Handle timer)
 {
-    int maxVotes    = -1;
+    int maxVotes    = 0;
     int winnerIndex = -1;
 
     // Find the index of the map with the highest votes
-    for (int i = 0; i < g_SelectedCount; i++)
+    for (int i = 0; i < MAX_VOTE_MAPS; i++)
     {
-        if (g_Votes[i] > maxVotes)
+        if (votes[i] > maxVotes)
         {
-            maxVotes    = g_Votes[i];
+            maxVotes    = votes[i];
             winnerIndex = i;
         }
     }
@@ -317,20 +348,18 @@ public Action VoteFinish(Handle timer)
         PrintToServer("[Left 4 Vote] No votes registered.");
 
         // Choose a random index from the selected maps for voting
-        winnerIndex = GetRandomInt(0, g_SelectedCount - 1);
+        winnerIndex = GetRandomInt(0, MAX_VOTE_MAPS - 1);
     }
 
-    int mapIndex = g_SelectedIndices[winnerIndex];
-    strcopy(g_MapCode, sizeof(g_MapCode), mapCodes[mapIndex]);
-    if (shouldDebug)
-    {
-        PrintToServer("[Left 4 Vote] Next Map Index: %d", mapIndex);
-        PrintToServer("[Left 4 Vote] Next Map Code: %d", g_MapCode);
-    }
+    int mapIndex = availableMapIndexesVotes[winnerIndex];
+    strcopy(votedMapCode, sizeof(votedMapCode), mapCodes[mapIndex]);
 
-    PrintToChatAll("Most voted map: %s with %d votes.", g_MapCode, maxVotes);
+    PrintToServer("[Left 4 Vote] Next Map Index: %d", mapIndex);
+    PrintToServer("[Left 4 Vote] Next Map Code: %s", votedMapCode);
 
-    CreateTimer(3.0, VoteChangeLevelTimer);
+    PrintToChatAll("Most voted map: %s with %d votes.", mapNames[mapIndex], maxVotes);
+
+    CreateTimer(2.0, VoteChangeLevelTimer);
 
     return Plugin_Stop;
 }
@@ -338,7 +367,7 @@ public Action VoteFinish(Handle timer)
 public Action VoteChangeLevelTimer(Handle timer)
 {
     // Execute the changelevel command with the selected map
-    ServerCommand("changelevel %s\n", g_MapCode);
+    ServerCommand("changelevel %s\n", votedMapCode);
 
     return Plugin_Stop;    // Stop the timer after execution
 }
@@ -374,5 +403,4 @@ stock bool IsValidClient(client)
         return false;
     }
     return IsClientInGame(client);
-
 }
