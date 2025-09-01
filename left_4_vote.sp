@@ -143,7 +143,6 @@ public Action CommandStartVote(int client, int args)
 {
     if (!IsValidClient(client)) return Plugin_Handled;
 
-    PrintToChat(client, "%d", GetUserFlagBits(client));
     if (!(GetUserFlagBits(client) & ADMFLAG_GENERIC))
     {
         PrintToChat(client, "[ERROR] Only admins can use this command.");
@@ -333,11 +332,11 @@ public int VoteMenuHandler(Menu menu, MenuAction action, int client, int param)
         int selection = StringToInt(info) - 1;
         votes[selection]++;
 
-        int  mapIndex = availableMapIndexesVotes[selection - 1];
+        int  mapIndex = availableMapIndexesVotes[selection];
         char chosenMapName[64];
         strcopy(chosenMapName, sizeof(chosenMapName), mapNames[mapIndex]);
 
-        PrintToChat(client, "Voted #%d: %s", selection, chosenMapName);
+        PrintToChat(client, "Voted #%d: %s", selection + 1, chosenMapName);
         PrintToServer("[Left 4 Vote] %d voted to: %s", client, mapCodes[mapIndex]);
     }
     return 0;
