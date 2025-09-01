@@ -1,5 +1,5 @@
 # Left 4 Vote
-Creates campaign vote system when versus ended
+Creates map vote system when versus/survivalversus ends
 
 ## Requirements
 - Sourcemod and metamod
@@ -161,3 +161,4 @@ Creates campaign vote system when versus ended
 
 }
 ```
+
