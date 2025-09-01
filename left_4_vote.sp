@@ -326,13 +326,19 @@ public void InitMapVote()
                 // Survival Versus create the Rematch button
                 if (StrEqual(gamemode, "mutation15") && mapCount >= MAX_VOTE_MAPS)
                 {
-                    char mapName[64];
-                    GetCurrentMap(mapName, sizeof(mapName));
+                    if (shouldDebug)
+                        PrintToServer("[Left 4 Vote] Versus Survival detected, trying to create rematch...");
 
+                    char mapCode[64];
+                    GetCurrentMap(mapCode, sizeof(mapCode));
+
+                    // Get current map index
                     int mapIndex = -1;
                     for (int x = 0; x < mapCount; x++)
                     {
-                        if (StrEqual(mapNames[x], mapName))
+                        if (shouldDebug)
+                            PrintToServer("[Left 4 Vote] STRINGS DIFFERENCE: %s, %s", mapCodes[x], mapCode);
+                        if (StrEqual(mapCodes[x], mapCode))
                         {
                             mapIndex = x;
                             break;
@@ -345,11 +351,17 @@ public void InitMapVote()
                         char menuId[2];
                         Format(menuId, sizeof(menuId), "%d", j + 1);
 
-                        menu.AddItem(menuId, mapNames[mapIndex]);
+                        menu.AddItem(menuId, "Rematch");
+                        // Replace first option with the rematch option
+                        availableMapIndexesVotes[j] = mapIndex;
 
                         if (shouldDebug)
                             PrintToServer("[Left 4 Vote] Rematch created for client: %d, map: %s", client, mapNames[mapIndex]);
                         continue;
+                    }
+                    else {
+                        if (shouldDebug)
+                            PrintToServer("[Left 4 Vote] FAILED TO CREATE REMATCH FOR: %d", client);
                     }
                 }
             }
