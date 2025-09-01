@@ -9,12 +9,14 @@ public Plugin myinfo =
     url         = "https://github.com/LeandroTheDev/left_4_vote"
 };
 
-int  mapCount = 0;
-char mapCodes[99][64];
-char mapNames[99][64];
+int       mapCount = 0;
+char      mapCodes[99][64];
+char      mapNames[99][64];
 
-char gamemode[64];
-bool shouldDebug = false;
+const int SECONDS_TO_VOTE = 10;
+
+char      gamemode[64];
+bool      shouldDebug = false;
 
 public void OnPluginStart()
 {
@@ -33,6 +35,16 @@ public void OnPluginStart()
     {
         PrintToServer("[Left 4 Vote] Missing -voteFile parameter, using default: addons/sourcemod/configs/left_4_vote.cfg");
         path = "addons/sourcemod/configs/left_4_vote.cfg";
+    }
+    else {
+        if (path[0] == EOS)
+        {
+            PrintToServer("[Left 4 Vote] -voteFile is empty, using default: addons/sourcemod/configs/left_4_vote.cfg");
+            path = "addons/sourcemod/configs/left_4_vote.cfg";
+        }
+        else {
+            PrintToServer("[Left 4 Vote] -voteFile path: %s", path);
+        }
     }
 
     if (!FileExists(path))
@@ -71,7 +83,7 @@ public void OnPluginStart()
         }
         else
         {
-            PrintToServer("[Left 4 Vote] Cannot create default file.");
+            PrintToServer("[Left 4 Vote] Cannot create default file in: %s", path);
             return;
         }
     }
@@ -207,6 +219,9 @@ public void GenerateMapVote()
         for (int i = 0; i < mapCount; i++)
         {
             availableMapIndexesVotes[i] = i;
+
+            if (shouldDebug)
+                PrintToServer("[Left 4 Vote] Fixed map added to random: %s", mapNames[availableMapIndexesVotes[i]]);
         }
     }
     // Random pickup map indexs
@@ -214,7 +229,7 @@ public void GenerateMapVote()
         int availableMapIndexesVotesCount = 0;
         for (int i = 0; i < mapCount; i++)
         {
-            int  randomIndex = GetRandomInt(0, mapCount);
+            int  randomIndex = GetRandomInt(0, mapCount - 1);
             bool exist       = false;
             for (int j = 0; j < MAX_VOTE_MAPS; j++)
             {
@@ -300,12 +315,12 @@ public void InitMapVote()
             menu.AddItem(menuId, mapNames[index]);
         }
 
-        menu.Display(client, 5);    // Show the menu with a 5 second timeout
+        menu.Display(client, SECONDS_TO_VOTE);
 
         PrintToServer("[Left 4 Vote] Menu generated for: %d", client);
     }
 
-    CreateTimer(5.0, VoteFinish, 0, TIMER_FLAG_NO_MAPCHANGE);
+    CreateTimer(float(SECONDS_TO_VOTE + 1), VoteFinish, 0, TIMER_FLAG_NO_MAPCHANGE);
 }
 
 public int VoteMenuHandler(Menu menu, MenuAction action, int client, int param)
@@ -349,12 +364,19 @@ public Action VoteFinish(Handle timer)
 
         // Choose a random index from the selected maps for voting
         winnerIndex = GetRandomInt(0, MAX_VOTE_MAPS - 1);
+
+        PrintToServer("[Left 4 Vote] Random map selected: %d", winnerIndex);
+    }
+    else {
+        PrintToServer("[Left 4 Vote] Player map selected: %d", winnerIndex);
     }
 
     int mapIndex = availableMapIndexesVotes[winnerIndex];
-    strcopy(votedMapCode, sizeof(votedMapCode), mapCodes[mapIndex]);
 
     PrintToServer("[Left 4 Vote] Next Map Index: %d", mapIndex);
+
+    strcopy(votedMapCode, sizeof(votedMapCode), mapCodes[mapIndex]);
+
     PrintToServer("[Left 4 Vote] Next Map Code: %s", votedMapCode);
 
     PrintToChatAll("Most voted map: %s with %d votes.", mapNames[mapIndex], maxVotes);
