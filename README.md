@@ -1,5 +1,10 @@
 # Left 4 Vote
-Creates map vote system when versus/survivalversus ends
+Creates map vote system when coop/versus/survival/survivalversus ends
+
+## How it Works
+- After the end of the round (survival) or map (coop, versus) the server will ask for a map vote, the maps to vote is randomly selected between the map list, if you wish to change the quantity to show you need to recompile changing the variable MAX_VOTE_MAPS
+- Most voted map of course will be selected
+- If no map was voted the server will choose a random map
 
 ## Requirements
 - Sourcemod and metamod
@@ -21,7 +26,7 @@ Creates map vote system when versus/survivalversus ends
 - Use the compiler from sourcemod to compile the left_4_vote.sp
 
 ## CONFIGURATIONS EXAMPLE
-``Versus``
+``Versus or Coop``
 ```ini
 "Left4Rank"
 {
@@ -65,7 +70,7 @@ Creates map vote system when versus/survivalversus ends
 
 }
 ```
-``Survival Versus``
+``Survival``
 ```ini
 "Left4Rank"
 {

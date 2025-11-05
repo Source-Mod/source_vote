@@ -131,12 +131,36 @@ public void OnPluginStart()
         PrintToServer("[Left 4 Vote] survival versus detected");
         HookEventEx("round_end", RoundEndSurvivalVersus, EventHookMode_Post);
     }
+    else if (StrEqual(gamemode, "survival")) {
+        PrintToServer("[Left 4 Vote] survival detected");
+        HookEventEx("round_end", RoundEndSurvivalVersus, EventHookMode_Post);
+    }
+    else if (StrEqual(gamemode, "coop")) {
+        PrintToServer("[Left 4 Vote] coop detected");
+        HookEventEx("finale_start", RoundEndCoop, EventHookMode_Post);
+    }
     else
-        PrintToServer("[Left 4 Rank] Unsoported gamemode: %s", gamemode);
+        PrintToServer("[Left 4 Vote] Unsuported gamemode: %s", gamemode);
 
     RegConsoleCmd("startvote", CommandStartVote, "Start voting system");
 
+    AddCommandListener(Command_CallVote, "callvote");
+
     PrintToServer("[Left 4 Vote] Initialized");
+}
+
+public Action Command_CallVote(int client, const char[] command, int argc)
+{
+    char targetRaw[128];
+    GetCmdArg(2, targetRaw, sizeof(targetRaw));
+
+    PrintToChatAll("[Left 4 Vote] %N called: %s, argument: %d", client, command, argc);
+    PrintToServer("[Left 4 Vote] %s", targetRaw);
+
+    char targetRaw2[128];
+    GetCmdArg(3, targetRaw2, sizeof(targetRaw2));
+    PrintToServer("[Left 4 Vote] %s", targetRaw2);
+    return Plugin_Continue;
 }
 
 public Action CommandStartVote(int client, int args)
@@ -166,6 +190,13 @@ public void RoundEndVersus(Event event, const char[] name, bool dontBroadcast)
     InitMapVote();
 }
 
+public void RoundEndCoop(Event event, const char[] name, bool dontBroadcast)
+{
+    GenerateMapVote();
+
+    InitMapVote();
+}
+
 static bool shouldMapVote = false;
 
 public void RoundEndSurvivalVersus(Event event, const char[] name, bool dontBroadcast)
@@ -188,6 +219,24 @@ public void RoundEndSurvivalVersus(Event event, const char[] name, bool dontBroa
         return;
     }
     shouldMapVote = false;
+
+    GenerateMapVote();
+
+    InitMapVote();
+}
+
+public void RoundEndSurvival(Event event, const char[] name, bool dontBroadcast)
+{
+    int reason = event.GetInt("reason");
+
+    // Restart from hibernation
+    if (reason == 8) return;
+
+    // Scenario Restart
+    if (reason == 0) return;
+
+    // Chapter ended
+    if (reason == 6) return;
 
     GenerateMapVote();
 
@@ -380,7 +429,23 @@ public Action VoteFinish(Handle timer)
 
     PrintToChatAll("Most voted map: %s with %d votes.", mapNames[mapIndex], maxVotes);
 
-    CreateTimer(2.0, VoteChangeLevelTimer);
+    if (StrEqual(gamemode, "survival"))
+    {
+        char currentMap[64];
+        GetCurrentMap(currentMap, sizeof(currentMap));
+
+        if (!StrEqual(currentMap, votedMapCode))
+        {
+            PrintToServer("[Left 4 Vote] Map code is not the same, %s / %s", currentMap, votedMapCode);
+            CreateTimer(2.0, VoteChangeLevelTimer);
+        }
+        else {
+            PrintToServer("[Left 4 Vote] Map code is the same, ignoring...");
+        }
+    }
+    else {
+        CreateTimer(2.0, VoteChangeLevelTimer);
+    }
 
     return Plugin_Stop;
 }
