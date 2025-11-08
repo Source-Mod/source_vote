@@ -133,7 +133,7 @@ public void OnPluginStart()
     }
     else if (StrEqual(gamemode, "survival")) {
         PrintToServer("[Left 4 Vote] survival detected");
-        HookEventEx("round_end", RoundEndSurvivalVersus, EventHookMode_Post);
+        HookEventEx("round_end", RoundEndSurvival, EventHookMode_Post);
     }
     else if (StrEqual(gamemode, "coop")) {
         PrintToServer("[Left 4 Vote] coop detected");
@@ -324,7 +324,7 @@ public void InitMapVote()
             if (j == 0)
             {
                 // Survival Versus create the Rematch button
-                if (StrEqual(gamemode, "mutation15") && mapCount >= MAX_VOTE_MAPS)
+                if ((StrEqual(gamemode, "mutation15") || StrEqual(gamemode, "survival")) && mapCount >= MAX_VOTE_MAPS)
                 {
                     if (shouldDebug)
                         PrintToServer("[Left 4 Vote] Versus Survival detected, trying to create rematch...");
@@ -351,7 +351,14 @@ public void InitMapVote()
                         char menuId[2];
                         Format(menuId, sizeof(menuId), "%d", j + 1);
 
-                        menu.AddItem(menuId, "Rematch");
+                        if (StrEqual(gamemode, "mutation15"))
+                        {
+                            menu.AddItem(menuId, "Rematch");
+                        }
+                        else if (StrEqual(gamemode, "survival"))
+                        {
+                            menu.AddItem(menuId, "Keep Map");
+                        }
                         // Replace first option with the rematch option
                         availableMapIndexesVotes[j] = mapIndex;
 
@@ -422,8 +429,15 @@ public Action VoteFinish(Handle timer)
     {
         PrintToServer("[Left 4 Vote] No votes registered.");
 
-        // Choose a random index from the selected maps for voting
-        winnerIndex = GetRandomInt(0, MAX_VOTE_MAPS - 1);
+        if (StrEqual(gamemode, "mutation15") || StrEqual(gamemode, "survival"))
+        {
+            // If is survival mode choose the rematch option
+            winnerIndex = 0
+        }
+        else {
+            // Choose a random index from the selected maps for voting
+            winnerIndex = GetRandomInt(0, MAX_VOTE_MAPS - 1);
+        }
 
         PrintToServer("[Left 4 Vote] Random map selected: %d", winnerIndex);
     }
