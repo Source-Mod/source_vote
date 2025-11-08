@@ -243,7 +243,7 @@ public void RoundEndSurvival(Event event, const char[] name, bool dontBroadcast)
     InitMapVote();
 }
 
-#define MAX_VOTE_MAPS 9
+#define MAX_VOTE_MAPS 8
 int  availableMapIndexesVotes[MAX_VOTE_MAPS];
 int  votes[MAX_VOTE_MAPS];
 char votedMapCode[64];
