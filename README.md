@@ -3,6 +3,8 @@
 ## Map Vote
 Creates map vote system when coop/versus/survival/survivalversus ends
 
+Also includes the commad ``!startvote`` for admins with the flag "g"
+
 To disable add ``-disableMapVote`` to command line parameters
 
 ### How it works
@@ -25,6 +27,17 @@ To disable add ``-disableBackToLobbyProtection`` to command line parameters
 
 ### How it works
 - The plugin listen for the call vote and stop before working
+
+## Ban
+``!ban <userid> <"Cheating in versus mode">`` command to ban players with given userid, the ban will automatically go to the ``-banPath`` or by default: ``cfg/bans.cfg``
+includes the comment saying the reason, game and ban date
+
+The command requires the admin flag: "d"
+
+To view userid you can use the command ``status`` in game console
+
+### How it works
+- Plugin execute the command ``banid 0 "steamid..." kick`` to ban the player, and also include that command in ``-banPath``, but you will need to exec the cfg on ``server.cfg`` -> ``exec bans.cfg``
 
 ## Requirements
 - Sourcemod and metamod

@@ -12,6 +12,7 @@ public Plugin myinfo =
 int       mapCount = 0;
 char      mapCodes[99][64];
 char      mapNames[99][64];
+char      ban_path[PLATFORM_MAX_PATH];
 
 const int SECONDS_TO_VOTE = 10;
 
@@ -44,6 +45,22 @@ public void OnPluginStart()
         }
         else {
             PrintToServer("[Left 4 Vote] -voteFile path: %s", path);
+        }
+    }
+
+    if (!GetCommandLineParam("-banFile", ban_path, sizeof(ban_path)))
+    {
+        PrintToServer("[Left 4 Vote] Missing -banFile parameter, using default: cfg/bans.cfg");
+        ban_path = "cfg/bans.cfg";
+    }
+    else {
+        if (ban_path[0] == EOS)
+        {
+            PrintToServer("[Left 4 Vote] -banFile is empty, using default: cfg/bans.cfg");
+            ban_path = "cfg/bans.cfg";
+        }
+        else {
+            PrintToServer("[Left 4 Vote] -banFile path: %s", ban_path);
         }
     }
 
@@ -146,6 +163,7 @@ public void OnPluginStart()
     }
 
     RegConsoleCmd("startvote", CommandStartVote, "Start voting system");
+    RegConsoleCmd("ban", CommandBan, "Ban someone");
 
     if (!(StrContains(commandLine, "-disableMdisableVoteKickProtectionpVote", false) != -1))
     {
@@ -220,12 +238,12 @@ public Action Votebacktolobby_Protection(int client, const char[] command, int a
 
 public Action CommandStartVote(int client, int args)
 {
-    if (!IsValidClient(client)) return Plugin_Handled;
+    if (!IsValidClient(client)) return Plugin_Stop;
 
-    if (!(GetUserFlagBits(client) & ADMFLAG_GENERIC))
+    if (!(GetUserFlagBits(client) & ADMFLAG_CHANGEMAP))
     {
         PrintToChat(client, "[ERROR] Only admins can use this command.");
-        return Plugin_Handled;
+        return Plugin_Stop;
     }
 
     GenerateMapVote();
@@ -233,6 +251,59 @@ public Action CommandStartVote(int client, int args)
     InitMapVote();
 
     PrintToChat(client, "[Left 4 Vote] Vote started");
+
+    return Plugin_Handled;
+}
+
+public Action CommandBan(int client, int args)
+{
+    if (!IsValidClient(client)) return Plugin_Stop;
+
+    if (!(GetUserFlagBits(client) & ADMFLAG_BAN))
+    {
+        PrintToChat(client, "[ERROR] Only admins can use this command.");
+        return Plugin_Stop;
+    }
+
+    int bannedClient = GetCmdArgInt(1);
+    if (!IsValidClient(bannedClient))
+    {
+        PrintToChat(bannedClient, "[Left 4 Vote] Client is invalid.");
+        return Plugin_Stop;
+    }
+
+    char reason[128];
+    GetCmdArg(2, reason, sizeof(reason));
+
+    if (StrEqual(reason, ""))
+    {
+        reason = "Unkown"
+    }
+
+    char steamId[32];
+    GetClientAuthId(client, AuthId_Steam2, steamId, sizeof(steamId), true);
+    char date[32];
+    FormatTime(date, sizeof(date), "%Y-%m-%d %H:%M:%S", GetTime());
+    char game[64];
+    GetGameFolderName(game, sizeof(game));
+
+    Handle file;
+    if (!FileExists(ban_path))
+    {
+        file = OpenFile(ban_path, "w");
+    }
+    else
+    {
+        file = OpenFile(ban_path, "a");
+    }
+
+    WriteFileLine(file, "// Game: %s, Reason: %s, Data: %s", game, reason, date);
+    WriteFileLine(file, "banid 0 %s", steamId);
+    CloseHandle(file);
+
+    ServerCommand("banid 0 %s kick", steamId);
+
+    PrintToChat(client, "[Left 4 Vote] Player permantly banned");
 
     return Plugin_Handled;
 }
