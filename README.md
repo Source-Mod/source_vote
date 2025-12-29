@@ -29,7 +29,7 @@ To disable add ``-disableBackToLobbyProtection`` to command line parameters
 - The plugin listen for the call vote and stop before working
 
 ## Ban
-``!ban <userid> <"Cheating in versus mode">`` command to ban players with given userid, the ban will automatically go to the ``-banPath`` or by default: ``cfg/bans.cfg``
+``!startban <userid> <"Cheating in versus mode">`` command to ban players with given userid, the ban will automatically go to the ``-banPath`` or by default: ``cfg/bans.cfg``
 includes the comment saying the reason, game and ban date
 
 The command requires the admin flag: "d"

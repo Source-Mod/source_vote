@@ -163,7 +163,7 @@ public void OnPluginStart()
     }
 
     RegConsoleCmd("startvote", CommandStartVote, "Start voting system");
-    RegConsoleCmd("ban", CommandBan, "Ban someone");
+    RegConsoleCmd("startban", CommandBan, "Ban someone");
 
     if (!(StrContains(commandLine, "-disableMdisableVoteKickProtectionpVote", false) != -1))
     {
@@ -240,7 +240,7 @@ public Action CommandStartVote(int client, int args)
 {
     if (!IsValidClient(client)) return Plugin_Stop;
 
-    if (!(GetUserFlagBits(client) & ADMFLAG_CHANGEMAP))
+    if (!(CheckCommandAccess(client, "sm_startvote", ADMFLAG_CHANGEMAP)))
     {
         PrintToChat(client, "[ERROR] Only admins can use this command.");
         return Plugin_Stop;
@@ -259,16 +259,24 @@ public Action CommandBan(int client, int args)
 {
     if (!IsValidClient(client)) return Plugin_Stop;
 
-    if (!(GetUserFlagBits(client) & ADMFLAG_BAN))
+    if (!(CheckCommandAccess(client, "sm_startban", ADMFLAG_BAN)))
     {
-        PrintToChat(client, "[ERROR] Only admins can use this command.");
+        PrintToServer("%d", GetUserFlagBits(client))
+            PrintToChat(client, "[ERROR] Only admins can use this command.");
         return Plugin_Stop;
     }
 
     int bannedClient = GetCmdArgInt(1);
+
+    if (bannedClient == 0)
+    {
+        PrintToChat(client, "[Left 4 Vote] startban usage: startban <userid> <reason>");
+        return Plugin_Stop;
+    }
+
     if (!IsValidClient(bannedClient))
     {
-        PrintToChat(bannedClient, "[Left 4 Vote] Client is invalid.");
+        PrintToChat(client, "[Left 4 Vote] Client is invalid.");
         return Plugin_Stop;
     }
 
@@ -295,6 +303,13 @@ public Action CommandBan(int client, int args)
     else
     {
         file = OpenFile(ban_path, "a");
+    }
+
+    if (file == INVALID_HANDLE)
+    {
+        LogError("[BAN] Failed to open file: %s", ban_path);
+        LogError("[BAN] FileExists=%d", FileExists(ban_path));
+        return Plugin_Stop;
     }
 
     WriteFileLine(file, "// Game: %s, Reason: %s, Data: %s", game, reason, date);
