@@ -1,10 +1,30 @@
 # Left 4 Vote
+
+## Map Vote
 Creates map vote system when coop/versus/survival/survivalversus ends
 
-## How it Works
+To disable add ``-disableMapVote`` to command line parameters
+
+### How it works
 - After the end of the round (survival) or map (coop, versus) the server will ask for a map vote, the maps to vote is randomly selected between the map list, if you wish to change the quantity to show you need to recompile changing the variable MAX_VOTE_MAPS
 - Most voted map of course will be selected
 - If no map was voted the server will choose a random map
+
+## Vote Kick Protection
+Protects admins from being vote kicked, also when admin call a kick vote insta kicks the player without vote
+
+To disable add ``-disableVoteKickProtection`` to command line parameters
+
+### How it works
+- The plugin listen for the call vote and check the caller and the kicker privileges
+
+## Vote Back To Lobby Protection
+Remove the back to lobby call vote, and show a message to the player saying this feature is disabled on the server
+
+To disable add ``-disableBackToLobbyProtection`` to command line parameters
+
+### How it works
+- The plugin listen for the call vote and stop before working
 
 ## Requirements
 - Sourcemod and metamod
@@ -17,7 +37,7 @@ Creates map vote system when coop/versus/survival/survivalversus ends
 
 3. Map configuration can be found on addons/sourcemod/configs/left_4_vote.cfg, (After first run)
 
-4. Add to server.cfg: ``sm_cvar sv_pz_endgame_vote_post_period 30``
+4. Add to server.cfg: ``sm_cvar sv_pz_endgame_vote_post_period 30``, for survival versus and versus vote system work propertly
 
 5. Run the server
 

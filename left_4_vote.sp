@@ -121,45 +121,100 @@ public void OnPluginStart()
         }
     }
 
-    GetConVarString(FindConVar("mp_gamemode"), gamemode, sizeof(gamemode));
-    if (StrEqual(gamemode, "versus"))
+    if (!(StrContains(commandLine, "-disableMapVote", false) != -1))
     {
-        PrintToServer("[Left 4 Vote] versus detected");
-        HookEventEx("versus_match_finished", RoundEndVersus, EventHookMode_Post);
+        GetConVarString(FindConVar("mp_gamemode"), gamemode, sizeof(gamemode));
+        if (StrEqual(gamemode, "versus"))
+        {
+            PrintToServer("[Left 4 Vote] versus detected");
+            HookEventEx("versus_match_finished", RoundEndVersus, EventHookMode_Post);
+        }
+        else if (StrEqual(gamemode, "mutation15")) {
+            PrintToServer("[Left 4 Vote] survival versus detected");
+            HookEventEx("round_end", RoundEndSurvivalVersus, EventHookMode_Post);
+        }
+        else if (StrEqual(gamemode, "survival")) {
+            PrintToServer("[Left 4 Vote] survival detected");
+            HookEventEx("round_end", RoundEndSurvival, EventHookMode_Post);
+        }
+        else if (StrEqual(gamemode, "coop")) {
+            PrintToServer("[Left 4 Vote] coop detected");
+            HookEventEx("finale_start", RoundEndCoop, EventHookMode_Post);
+        }
+        else
+            PrintToServer("[Left 4 Vote] Unsuported gamemode: %s", gamemode);
     }
-    else if (StrEqual(gamemode, "mutation15")) {
-        PrintToServer("[Left 4 Vote] survival versus detected");
-        HookEventEx("round_end", RoundEndSurvivalVersus, EventHookMode_Post);
-    }
-    else if (StrEqual(gamemode, "survival")) {
-        PrintToServer("[Left 4 Vote] survival detected");
-        HookEventEx("round_end", RoundEndSurvival, EventHookMode_Post);
-    }
-    else if (StrEqual(gamemode, "coop")) {
-        PrintToServer("[Left 4 Vote] coop detected");
-        HookEventEx("finale_start", RoundEndCoop, EventHookMode_Post);
-    }
-    else
-        PrintToServer("[Left 4 Vote] Unsuported gamemode: %s", gamemode);
 
     RegConsoleCmd("startvote", CommandStartVote, "Start voting system");
 
-    AddCommandListener(Command_CallVote, "callvote");
+    if (!(StrContains(commandLine, "-disableMdisableVoteKickProtectionpVote", false) != -1))
+    {
+        PrintToServer("[Left 4 Vote] vote kick protection for admins is enabled");
+        AddCommandListener(Votekick_Protection, "callvote");
+    }
+    if (!(StrContains(commandLine, "-disableBackToLobbyProtection", false) != -1))
+    {
+        PrintToServer("[Left 4 Vote] vote back to lobby protection is enabled");
+        AddCommandListener(Votekick_Protection, "callvote");
+    }
 
-    PrintToServer("[Left 4 Vote] Initialized");
+    PrintToServer("[Left 4 Vote] initialized");
 }
 
-public Action Command_CallVote(int client, const char[] command, int argc)
+public Action Votekick_Protection(int client, const char[] command, int argc)
 {
     char targetRaw[128];
     GetCmdArg(2, targetRaw, sizeof(targetRaw));
 
-    PrintToChatAll("[Left 4 Vote] %N called: %s, argument: %d", client, command, argc);
-    PrintToServer("[Left 4 Vote] %s", targetRaw);
+    // Vote kick
+    if (StrEqual(command, "callvote") && argc == 2)
+    {
+        int kickedClient = GetClientOfUserId(StringToInt(targetRaw));
 
-    char targetRaw2[128];
-    GetCmdArg(3, targetRaw2, sizeof(targetRaw2));
-    PrintToServer("[Left 4 Vote] %s", targetRaw2);
+        // Requested kick player is any admin
+        if (IsValidClient(client))
+        {
+            if (GetUserFlagBits(client) & ADMFLAG_GENERIC)
+            {
+                ServerCommand("kickid %d", StringToInt(targetRaw));
+                PrintToChat(client, "[Left 4 Vote] User insta kicked because you are the admin");
+                return Plugin_Stop;
+            }
+        }
+
+        // Kicked player is any admin
+        if (IsValidClient(kickedClient))
+        {
+            if (GetUserFlagBits(kickedClient) & ADMFLAG_GENERIC)
+            {
+                char kickerName[128];
+                GetClientName(client, kickerName, sizeof(kickerName));
+                PrintToServer("[Left 4 Vote] cancelling %s votekick, because the kicked client is any admin", kickerName);
+                PrintToChat(kickedClient, "[Left 4 Vote] %s is trying to kick you, but you are any admin, show him some respect", kickerName);
+                return Plugin_Stop;
+            }
+        }
+    }
+
+    return Plugin_Continue;
+}
+
+public Action Votebacktolobby_Protection(int client, const char[] command, int argc)
+{
+    char targetRaw[128];
+    GetCmdArg(2, targetRaw, sizeof(targetRaw));
+
+    PrintToServer("[Left 4 Vote] %d called: %s, argument: %d, to: %s", client, command, argc, targetRaw);
+
+    // Back to lobby
+    if (StrEqual(command, "callvote") && argc == 1)
+    {
+        char voteClientName[128];
+        GetClientName(client, voteClientName, sizeof(voteClientName));
+        PrintToChatAll("[Left 4 Vote] %s back to lobby is not allowed on this server", voteClientName);
+        return Plugin_Stop
+    }
+
     return Plugin_Continue;
 }
 
