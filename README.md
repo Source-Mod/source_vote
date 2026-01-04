@@ -1,4 +1,4 @@
-# Left 4 Vote
+# Source Vote
 
 ## Map Vote
 Creates map vote system when coop/versus/survival/survivalversus ends
@@ -21,7 +21,7 @@ To disable add ``-disableVoteKickProtection`` to command line parameters
 - The plugin listen for the call vote and check the caller and the kicker privileges
 
 ## Vote Back To Lobby Protection
-Remove the back to lobby call vote, and show a message to the player saying this feature is disabled on the server
+Remove the back to lobby call vote, and show a message to the player saying this feature is disabled on the server, if the client has the flag ADMFLAG_CHANGEMAP ("g") he can use the vote to lobby
 
 To disable add ``-disableBackToLobbyProtection`` to command line parameters
 

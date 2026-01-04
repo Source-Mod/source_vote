@@ -311,7 +311,7 @@ public void OnPluginStart()
     if (!(StrContains(commandLine, "-disableBackToLobbyProtection", false) != -1))
     {
         PrintToServer("[Source Vote] vote back to lobby protection is enabled");
-        AddCommandListener(Votekick_Protection, "callvote");
+        AddCommandListener(Votebacktolobby_Protection, "callvote");
     }
 
     PrintToServer("[Source Vote] initialized");
@@ -369,15 +369,16 @@ public Action Votebacktolobby_Protection(int client, const char[] command, int a
     char targetRaw[128];
     GetCmdArg(2, targetRaw, sizeof(targetRaw));
 
-    PrintToServer("[Source Vote] %d called: %s, argument: %d, to: %s", client, command, argc, targetRaw);
-
     // Back to lobby
     if (StrEqual(command, "callvote") && argc == 1)
     {
-        char voteClientName[128];
-        GetClientName(client, voteClientName, sizeof(voteClientName));
-        PrintToChatAll("[Source Vote] %s back to lobby is not allowed on this server", voteClientName);
-        return Plugin_Stop
+        if (!(GetUserFlagBits(client) & ADMFLAG_CHANGEMAP))
+        {
+            char voteClientName[128];
+            GetClientName(client, voteClientName, sizeof(voteClientName));
+            PrintToChatAll("[Source Vote] %s back to lobby is not allowed on this server", voteClientName);
+            return Plugin_Stop
+        }
     }
 
     return Plugin_Continue;
