@@ -1,21 +1,26 @@
 # Source Vote
 
+- ``sourcevotereload`` reload cvars and configurations only admins with the flag "g"
+
 ## Map Vote
 Creates map vote system when coop/versus/survival/survivalversus ends
 
-Also includes the commad ``!startvote`` for admins with the flag "g"
+- ``startvote`` start voting system only admins with the flag "g"
+- ``sm_cvar sourceVote_VoteFile "addons/sourcemod/configs/source_vote.cfg"`` change the vote file.
+- ``sm_cvar sourceVote_SecondsToVote 10`` change the seconds to vote for a map.
 
-To disable add ``-disableMapVote`` to command line parameters
+To disable exec ``sm_cvar sourceVote_DisableMapVote 1``
 
 ### How it works
-- After the end of the round (survival) or map (coop, versus) the server will ask for a map vote, the maps to vote is randomly selected between the map list, if you wish to change the quantity to show you need to recompile changing the variable MAX_VOTE_MAPS
-- Most voted map of course will be selected
-- If no map was voted the server will choose a random map
+- After the end of the round the server will ask for a map vote, the maps to vote is randomly selected between the map list.
+- Most voted map of course will be selected.
+- For left 4 dead 2, if no maps are voted in survival will remain on the same map, otherwises a random will be selected
+- No more room in hell, if no maps are voted will remain on the same map
 
 ## Vote Kick Protection
 Protects admins from being vote kicked, also when admin call a kick vote insta kicks the player without vote
 
-To disable add ``-disableVoteKickProtection`` to command line parameters
+To disable exec ``sm_cvar sourceVote_DisableAdminVoteKickProtection 1``
 
 ### How it works
 - The plugin listen for the call vote and check the caller and the kicker privileges
@@ -23,40 +28,41 @@ To disable add ``-disableVoteKickProtection`` to command line parameters
 ## Vote Back To Lobby Protection
 Remove the back to lobby call vote, and show a message to the player saying this feature is disabled on the server, if the client has the flag ADMFLAG_CHANGEMAP ("g") he can use the vote to lobby
 
-To disable add ``-disableBackToLobbyProtection`` to command line parameters
+To disable exec ``sm_cvar sourceVote_DisableBackToLobbyProtection 1``
 
 ### How it works
 - The plugin listen for the call vote and stop before working
 
 ## Ban
-``!startban <userid> <"Cheating in versus mode">`` command to ban players with given userid, the ban will automatically go to the ``-banPath`` or by default: ``cfg/bans.cfg``
-includes the comment saying the reason, game and ban date
+``!startban <userid> <"Cheating in versus mode">`` command to ban players with given userid, the ban will automatically go to the ``sm_cvar sourceVote_BanFile "cfg/bans.cfg"`` includes the comment saying the reason, game and ban date, a menu is also available by using only ``!startban``
 
 The command requires the admin flag: "d"
 
 To view userid you can use the command ``status`` in game console
 
 ### How it works
-- Plugin execute the command ``banid 0 "steamid..." kick`` to ban the player, and also include that command in ``-banPath``, but you will need to exec the cfg on ``server.cfg`` -> ``exec bans.cfg``
+- Plugin execute the command ``banid 0 "steamid..." kick`` to ban the player, and also include that command in ``sm_cvar sourceVote_BanFile "cfg/bans.cfg"``, but you will need to exec the cfg on ``server.cfg`` -> ``exec bans.cfg``
 
 ## Requirements
 - Sourcemod and metamod
 
 ## Usage
 1. Download the plugin from the latest release:
-[Releases Section](https://github.com/LeandroTheDev/left_4_vote/releases)
+[Releases Section](https://github.com/LeandroTheDev/source_vote/releases)
 
 2. Place the compiled .smx file into the following folder on your server: addons/sourcemod/plugins/
 
-3. Map configuration can be found on addons/sourcemod/configs/left_4_vote.cfg, (After first run)
+3. Map configuration can be found on addons/sourcemod/configs/source_vote.cfg, (After first run)
 
-4. Add to server.cfg: ``sm_cvar sv_pz_endgame_vote_post_period 30``, for survival versus and versus vote system work propertly
+4. (Left 4 Dead 2 Survival Servers) Add to server.cfg: ``sm_cvar sv_pz_endgame_vote_post_period 30``, for survival versus and versus vote system work propertly
+
+5. (No More Room in Hell) Disable tokens to prevent incorrect map votes.
 
 5. Run the server
 
 ## Compiling
 
-- Use the compiler from sourcemod to compile the left_4_vote.sp
+- Use the compiler from sourcemod to compile the source_vote.sp
 
 ## CONFIGURATIONS EXAMPLE
 ``Versus or Coop``
