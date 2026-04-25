@@ -9,32 +9,32 @@ public Plugin myinfo =
     url         = "https://github.com/LeandroTheDev/source_vote"
 };
 
-static int gv_NMRIH_IsDeadPlayer[MAXPLAYERS];
+static bool gv_NMRIH_IsDeadPlayer[MAXPLAYERS];
 
-int        gv_BanTargetMap[MAXPLAYERS];
-bool       gv_ShouldDebug = false;
-int        gv_MapCount    = 0;
-char       gv_MapCodes[99][64];
-char       gv_MapNames[99][64];
-char       gv_BanPath[PLATFORM_MAX_PATH];
-char       gv_VotePath[PLATFORM_MAX_PATH];
-int        gv_SecondsToVote                  = 10;
-bool       gv_DisableMapVote                 = false;
-bool       gv_DisableAdminVoteKickProtection = false;
-bool       gv_DisableBackToLobbyProtection   = false;
+int         gv_BanTargetMap[MAXPLAYERS];
+bool        gv_ShouldDebug = false;
+int         gv_MapCount    = 0;
+char        gv_MapCodes[99][64];
+char        gv_MapNames[99][64];
+char        gv_BanPath[PLATFORM_MAX_PATH];
+char        gv_VotePath[PLATFORM_MAX_PATH];
+int         gv_SecondsToVote                  = 10;
+bool        gv_DisableMapVote                 = false;
+bool        gv_DisableAdminVoteKickProtection = false;
+bool        gv_DisableBackToLobbyProtection   = false;
 
-char       gv_Gamemode[64];
-char       gv_Game[64];
+char        gv_Gamemode[64];
+char        gv_Game[64];
 
-ConVar     g_ShouldDebug;
-ConVar     g_VotePath;
-ConVar     g_BanFilePath;
-ConVar     g_SecondsToVote;
-ConVar     g_DisableMapVote;
-ConVar     g_DisableAdminVoteKickProtection;
-ConVar     g_DisableBackToLobbyProtection;
+ConVar      g_ShouldDebug;
+ConVar      g_VotePath;
+ConVar      g_BanFilePath;
+ConVar      g_SecondsToVote;
+ConVar      g_DisableMapVote;
+ConVar      g_DisableAdminVoteKickProtection;
+ConVar      g_DisableBackToLobbyProtection;
 
-void       ReadVariables()
+void        ReadVariables()
 {
     gv_ShouldDebug = g_ShouldDebug.BoolValue;
     PrintToServer("[Source Vote] Should debug is enabled: %b", gv_ShouldDebug);
@@ -788,6 +788,12 @@ public void OnPlayerDeath(Event event, const char[] name, bool dontBroadcast)
     }
 
     gv_NMRIH_IsDeadPlayer[client] = true;
+    if (gv_ShouldDebug)
+    {
+        char clientName[128];
+        GetClientName(client, clientName, sizeof(clientName));
+        PrintToServer("[Source Vote-OnPlayerDeath] %s IsDeadPlayer: %b", clientName, gv_NMRIH_IsDeadPlayer[client]);
+    }
 
     for (int i = 1; i <= MaxClients; i++)
     {
@@ -795,7 +801,15 @@ public void OnPlayerDeath(Event event, const char[] name, bool dontBroadcast)
             continue;
 
         if (!gv_NMRIH_IsDeadPlayer[i])
+        {
+            if (gv_ShouldDebug)
+            {
+                char clientName[128];
+                GetClientName(i, clientName, sizeof(clientName));
+                PrintToServer("[Source Vote-OnPlayerDeath] %s is alive ignoring map vote");
+            }
             return;
+        }
     }
 
     GenerateMapVote();
@@ -813,6 +827,37 @@ public void OnPlayerSpawn(Event event, const char[] name, bool dontBroadcast)
     }
 
     gv_NMRIH_IsDeadPlayer[client] = false;
+
+    if (gv_ShouldDebug)
+    {
+        char clientName[128];
+        GetClientName(client, clientName, sizeof(clientName));
+        PrintToServer("[Source Vote-OnPlayerSpawn] %s IsDeadPlayer: %b", clientName, gv_NMRIH_IsDeadPlayer[client]);
+    }
+}
+
+public bool OnClientConnect(int client, char[] rejectmsg, int maxlen)
+{
+    gv_NMRIH_IsDeadPlayer[client] = true;
+
+    if (gv_ShouldDebug)
+    {
+        char clientName[128];
+        GetClientName(client, clientName, sizeof(clientName));
+        PrintToServer("[Source Vote-OnClientConnect] %s IsDeadPlayer: %b", clientName, gv_NMRIH_IsDeadPlayer[client]);
+    }
+}
+
+public void OnClientDisconnect(int client)
+{
+    gv_NMRIH_IsDeadPlayer[client] = false;
+
+    if (gv_ShouldDebug)
+    {
+        char clientName[128];
+        GetClientName(client, clientName, sizeof(clientName));
+        PrintToServer("[Source Vote-OnClientDisconnect] %s IsDeadPlayer: %b", clientName, gv_NMRIH_IsDeadPlayer[client]);
+    }
 }
 // #endregion No More Room in Hell
 
