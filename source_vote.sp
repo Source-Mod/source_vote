@@ -328,6 +328,7 @@ void ReadConfigs()
             HookEvent("player_death", OnPlayerDeath, EventHookMode_PostNoCopy);
             HookEvent("player_spawn", OnPlayerSpawn, EventHookMode_PostNoCopy);
             HookEvent("extraction_complete", RoundEndBasic, EventHookMode_PostNoCopy);
+            HookEvent("map_complete", FunctionTest, EventHookMode_PostNoCopy);
         }
         else if (StrEqual(gv_Game, "tf")) {
             // teamplay_game_over ???
@@ -465,6 +466,10 @@ public Action Votekick_Protection(int client, const char[] command, int argc)
     // Vote kick
     if (StrEqual(command, "callvote") && argc == 2)
     {
+        // Start new campaign command
+        if (StrEqual("L4D2C1", targetRaw))
+            return Plugin_Continue;
+
         int kickedClient = GetClientOfUserId(StringToInt(targetRaw));
 
         // Requested kick player is any admin
@@ -511,7 +516,18 @@ public Action Votebacktolobby_Protection(int client, const char[] command, int a
             return Plugin_Stop
         }
     }
-
+    // Start new campaign
+    else if (StrEqual(command, "callvote") && argc == 2)
+    {
+        // Start new campaign command
+        if (StrEqual("L4D2C1", targetRaw))
+        {
+            char voteClientName[128];
+            GetClientName(client, voteClientName, sizeof(voteClientName));
+            PrintToChatAll("[Source Vote] %s start new campaign is not allowed on this server", voteClientName);
+            return Plugin_Stop;
+        }
+    }
     return Plugin_Continue;
 }
 
@@ -860,6 +876,11 @@ public void OnClientDisconnect(int client)
         GetClientName(client, clientName, sizeof(clientName));
         PrintToServer("[Source Vote-OnClientDisconnect] %s IsDeadPlayer: %b", clientName, gv_NMRIH_IsDeadPlayer[client]);
     }
+}
+
+public void FunctionTest(Event event, const char[] name, bool dontBroadcast)
+{
+    PrintToServer("!!!!!!!!!!!!!!!!!!!!!!! TEST map_complete");
 }
 // #endregion No More Room in Hell
 
