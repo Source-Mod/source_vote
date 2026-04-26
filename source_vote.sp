@@ -535,9 +535,9 @@ public Action Votebacktolobby_Protection(int client, const char[] command, int a
 
 public Action CommandStartVote(int client, int args)
 {
-    if (!IsValidClient(client)) return Plugin_Stop;
-
-    if (!(CheckCommandAccess(client, "sm_startvote", ADMFLAG_CHANGEMAP)))
+    if (client != 0 && !IsValidClient(client))
+        return Plugin_Stop;
+    if (client != 0 && !(CheckCommandAccess(client, "sm_startvote", ADMFLAG_CHANGEMAP)))
     {
         PrintToChat(client, "[ERROR] Only admins can use this command.");
         return Plugin_Stop;
@@ -556,7 +556,6 @@ public Action CommandSourceVoteReload(int client, int args)
 {
     if (client != 0 && !IsValidClient(client))
         return Plugin_Stop;
-
     if (client != 0 && !CheckCommandAccess(client, "sm_startban", ADMFLAG_BAN))
     {
         PrintToChat(client, "[ERROR] Only admins can use this command.");
@@ -577,10 +576,9 @@ public Action CommandSourceVoteReload(int client, int args)
 // #region Ban
 public Action CommandBan(int client, int args)
 {
-    if (!IsValidClient(client)) return Plugin_Stop;
-    if (!(CheckCommandAccess(client, "sm_startban", ADMFLAG_BAN)))
+    if (client != 0 && !IsValidClient(client)) return Plugin_Stop;
+    if (client != 0 && !(CheckCommandAccess(client, "sm_startban", ADMFLAG_BAN)))
     {
-        PrintToServer("%d", GetUserFlagBits(client));
         PrintToChat(client, "[ERROR] Only admins can use this command.");
         return Plugin_Stop;
     }
