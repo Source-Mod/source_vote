@@ -491,7 +491,9 @@ public Action Votekick_Protection(int client, const char[] command, int argc)
                 char kickerName[128];
                 GetClientName(client, kickerName, sizeof(kickerName));
                 PrintToServer("[Source Vote] cancelling %s votekick, because the kicked client is any admin", kickerName);
-                PrintToChat(kickedClient, "[Source Vote] %s is trying to kick you, but you are any admin, show him some respect", kickerName);
+                char steamId[32];
+                GetClientAuthId(client, AuthId_Steam2, steamId, sizeof(steamId));
+                PrintToChat(kickedClient, "[Source Vote] %s is trying to kick you, but you are any admin, show him some respect, their id: %s", kickerName, steamId);
                 return Plugin_Stop;
             }
         }
