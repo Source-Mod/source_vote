@@ -846,6 +846,8 @@ public bool OnClientConnect(int client, char[] rejectmsg, int maxlen)
         GetClientName(client, clientName, sizeof(clientName));
         PrintToServer("[Source Vote-OnClientConnect] %s IsDeadPlayer: %b", clientName, gv_NMRIH_IsDeadPlayer[client]);
     }
+
+    return true;
 }
 
 public void OnClientDisconnect(int client)
