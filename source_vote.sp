@@ -533,6 +533,9 @@ public Action Votebacktolobby_Protection(int client, const char[] command, int a
     return Plugin_Continue;
 }
 
+//
+// #region Commands
+//
 public Action CommandStartVote(int client, int args)
 {
     if (client != 0 && !IsValidClient(client))
@@ -735,8 +738,13 @@ void ExecuteBan(int client, int bannedClient, const char[] reason)
     PrintToChat(client, "[Source Vote] Player permantly banned. Reason: %s", reason);
 }
 // #endregion Ban
+//
+// #endregion Commands
+//
 
-/// REGION EVENTS
+//
+// #region Events
+//
 public void RoundEndBasic(Event event, const char[] name, bool dontBroadcast)
 {
     GenerateMapVote();
@@ -883,6 +891,9 @@ public void FunctionTest(Event event, const char[] name, bool dontBroadcast)
     PrintToServer("!!!!!!!!!!!!!!!!!!!!!!! TEST map_complete");
 }
 // #endregion No More Room in Hell
+//
+// #endregion No More Room in Hell
+//
 
 #define MAX_VOTE_MAPS 8
 int  gv_AvailableMapIndexesVotes[MAX_VOTE_MAPS];
@@ -1180,8 +1191,9 @@ public Action VoteChangeLevelTimer(Handle timer)
     return Plugin_Stop;    // Stop the timer after execution
 }
 
-/// REGION Utils
-
+//
+// #region Utils
+//
 stock void GetOnlinePlayers(int[] onlinePlayers, int playerSize)
 {
     int arrayIndex = 0;
@@ -1212,3 +1224,6 @@ stock bool IsValidClient(client)
     }
     return IsClientInGame(client);
 }
+//
+// #endregion
+//
