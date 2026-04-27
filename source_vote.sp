@@ -556,7 +556,7 @@ public Action CommandSourceVoteReload(int client, int args)
 {
     if (client != 0 && !IsValidClient(client))
         return Plugin_Stop;
-    if (client != 0 && !CheckCommandAccess(client, "sm_startban", ADMFLAG_BAN))
+    if (client != 0 && !CheckCommandAccess(client, "sm_sourcevotereload", ADMFLAG_BAN))
     {
         PrintToChat(client, "[ERROR] Only admins can use this command.");
         return Plugin_Stop;
