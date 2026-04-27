@@ -37,16 +37,16 @@ ConVar      g_DisableBackToLobbyProtection;
 void        ReadVariables()
 {
     gv_ShouldDebug = g_ShouldDebug.BoolValue;
-    PrintToServer("[Source Vote] Should debug is enabled: %b", gv_ShouldDebug);
+    PrintToServer("[SourceVote] Should debug is enabled: %b", gv_ShouldDebug);
 
     g_VotePath.GetString(gv_VotePath, sizeof(gv_VotePath));
-    PrintToServer("[Source Vote] Using vote file: %s", gv_VotePath);
+    PrintToServer("[SourceVote] Using vote file: %s", gv_VotePath);
 
     g_BanFilePath.GetString(gv_BanPath, sizeof(gv_BanPath));
-    PrintToServer("[Source Vote] Using ban file: %s", gv_BanPath);
+    PrintToServer("[SourceVote] Using ban file: %s", gv_BanPath);
 
     gv_SecondsToVote = g_SecondsToVote.IntValue;
-    PrintToServer("[Source Vote] Seconds to Vote: %d", gv_SecondsToVote);
+    PrintToServer("[SourceVote] Seconds to Vote: %d", gv_SecondsToVote);
 
     GetGameFolderName(gv_Game, sizeof(gv_Game));
 
@@ -56,17 +56,17 @@ void        ReadVariables()
     }
     else {
         GetConVarString(FindConVar("mp_gamemode"), gv_Gamemode, sizeof(gv_Gamemode));
-        PrintToServer("[Source Vote] Loaded gv_Gamemode: %s", gv_Gamemode);
+        PrintToServer("[SourceVote] Loaded gv_Gamemode: %s", gv_Gamemode);
     }
 
     gv_DisableMapVote = g_DisableMapVote.BoolValue;
-    PrintToServer("[Source Vote] Map vote is disabled: %b", gv_DisableMapVote);
+    PrintToServer("[SourceVote] Map vote is disabled: %b", gv_DisableMapVote);
 
     gv_DisableAdminVoteKickProtection = g_DisableAdminVoteKickProtection.BoolValue;
-    PrintToServer("[Source Vote] Admin vote kick protection is disabled: %b", gv_DisableAdminVoteKickProtection);
+    PrintToServer("[SourceVote] Admin vote kick protection is disabled: %b", gv_DisableAdminVoteKickProtection);
 
     gv_DisableBackToLobbyProtection = g_DisableBackToLobbyProtection.BoolValue;
-    PrintToServer("[Source Vote] Back to lobby protection is disabled: %b", gv_DisableBackToLobbyProtection);
+    PrintToServer("[SourceVote] Back to lobby protection is disabled: %b", gv_DisableBackToLobbyProtection);
 }
 
 void ReadConfigs()
@@ -254,11 +254,11 @@ void ReadConfigs()
                 WriteFileLine(file, "}");
             }
             CloseHandle(file);
-            PrintToServer("[Source Vote] Configuration file created: %s", gv_VotePath);
+            PrintToServer("[SourceVote] Configuration file created: %s", gv_VotePath);
         }
         else
         {
-            PrintToServer("[Source Vote] Cannot create default file in: %s", gv_VotePath);
+            PrintToServer("[SourceVote] Cannot create default file in: %s", gv_VotePath);
             return;
         }
     }
@@ -269,7 +269,7 @@ void ReadConfigs()
     if (!kv.ImportFromFile(gv_VotePath))
     {
         delete kv;
-        PrintToServer("[Source Vote] Cannot load configuration file: %s", gv_VotePath);
+        PrintToServer("[SourceVote] Cannot load configuration file: %s", gv_VotePath);
     }
     // Loading from file
     else {
@@ -283,7 +283,7 @@ void ReadConfigs()
                 kv.GetString(key, gv_MapCodes[i], 64);
             }
             kv.GoBack();
-            PrintToServer("[Source Vote] Map Codes Loaded!");
+            PrintToServer("[SourceVote] Map Codes Loaded!");
         }
         if (kv.JumpToKey("gv_MapNames"))
         {
@@ -294,7 +294,7 @@ void ReadConfigs()
                 kv.GetString(key, gv_MapNames[i], 64);
             }
             kv.GoBack();
-            PrintToServer("[Source Vote] Map Names Loaded!");
+            PrintToServer("[SourceVote] Map Names Loaded!");
         }
     }
     // #endregion Configuration Load
@@ -306,23 +306,23 @@ void ReadConfigs()
         {
             if (StrEqual(gv_Gamemode, "versus"))
             {
-                PrintToServer("[Source Vote] versus detected");
+                PrintToServer("[SourceVote] versus detected");
                 HookEventEx("versus_match_finished", RoundEndBasic, EventHookMode_Post);
             }
             else if (StrEqual(gv_Gamemode, "mutation15")) {
-                PrintToServer("[Source Vote] survival versus detected");
+                PrintToServer("[SourceVote] survival versus detected");
                 HookEventEx("round_end", RoundEndSurvivalVersus, EventHookMode_Post);
             }
             else if (StrEqual(gv_Gamemode, "survival")) {
-                PrintToServer("[Source Vote] survival detected");
+                PrintToServer("[SourceVote] survival detected");
                 HookEventEx("round_end", RoundEndSurvival, EventHookMode_Post);
             }
             else if (StrEqual(gv_Gamemode, "coop")) {
-                PrintToServer("[Source Vote] coop detected");
+                PrintToServer("[SourceVote] coop detected");
                 HookEventEx("finale_start", RoundEndBasic, EventHookMode_Post);
             }
             else
-                PrintToServer("[Source Vote] Unsuported gv_Gamemode: %s", gv_Gamemode);
+                PrintToServer("[SourceVote] Unsuported gv_Gamemode: %s", gv_Gamemode);
         }
         else if (StrEqual(gv_Game, "nmrih")) {
             HookEvent("player_death", OnPlayerDeath, EventHookMode_PostNoCopy);
@@ -339,12 +339,12 @@ void ReadConfigs()
     // #region Protections
     if (gv_DisableAdminVoteKickProtection == false)
     {
-        PrintToServer("[Source Vote] vote kick protection for admins is enabled");
+        PrintToServer("[SourceVote] vote kick protection for admins is enabled");
         AddCommandListener(Votekick_Protection, "callvote");
     }
     if (gv_DisableBackToLobbyProtection)
     {
-        PrintToServer("[Source Vote] vote back to lobby protection is enabled");
+        PrintToServer("[SourceVote] vote back to lobby protection is enabled");
         AddCommandListener(Votebacktolobby_Protection, "callvote");
     }
     // #endregion Protections
@@ -438,7 +438,7 @@ public void OnPluginStart()
 
     AddCommandListener(Vote_Print, "callvote");
 
-    PrintToServer("[Source Vote] initialized");
+    PrintToServer("[SourceVote] initialized");
 }
 
 public OnServerEnterHibernation()
@@ -454,7 +454,7 @@ public Action Vote_Print(int client, const char[] command, int argc)
     char targetRaw[128];
     GetCmdArg(2, targetRaw, sizeof(targetRaw));
 
-    PrintToServer("[Source Vote] Someone called a callvote, command: %s, argument: %d, target: %s", command, argc, targetRaw);
+    PrintToServer("[SourceVote] Someone called a callvote, command: %s, argument: %d, target: %s", command, argc, targetRaw);
     return Plugin_Continue;
 }
 
@@ -478,7 +478,7 @@ public Action Votekick_Protection(int client, const char[] command, int argc)
             if (GetUserFlagBits(client) & ADMFLAG_GENERIC)
             {
                 ServerCommand("kickid %d", StringToInt(targetRaw));
-                PrintToChat(client, "[Source Vote] User insta kicked because you are the admin");
+                PrintToChat(client, "[SourceVote] User insta kicked because you are the admin");
                 return Plugin_Stop;
             }
         }
@@ -490,10 +490,10 @@ public Action Votekick_Protection(int client, const char[] command, int argc)
             {
                 char kickerName[128];
                 GetClientName(client, kickerName, sizeof(kickerName));
-                PrintToServer("[Source Vote] cancelling %s votekick, because the kicked client is any admin", kickerName);
+                PrintToServer("[SourceVote] cancelling %s votekick, because the kicked client is any admin", kickerName);
                 char steamId[32];
                 GetClientAuthId(client, AuthId_Steam2, steamId, sizeof(steamId));
-                PrintToChat(kickedClient, "[Source Vote] %s is trying to kick you, but you are any admin, show him some respect, their id: %s", kickerName, steamId);
+                PrintToChat(kickedClient, "[SourceVote] %s is trying to kick you, but you are any admin, show him some respect, their id: %s", kickerName, steamId);
                 return Plugin_Stop;
             }
         }
@@ -514,7 +514,7 @@ public Action Votebacktolobby_Protection(int client, const char[] command, int a
         {
             char voteClientName[128];
             GetClientName(client, voteClientName, sizeof(voteClientName));
-            PrintToChatAll("[Source Vote] %s back to lobby is not allowed on this server", voteClientName);
+            PrintToChatAll("[SourceVote] %s back to lobby is not allowed on this server", voteClientName);
             return Plugin_Stop
         }
     }
@@ -526,7 +526,7 @@ public Action Votebacktolobby_Protection(int client, const char[] command, int a
         {
             char voteClientName[128];
             GetClientName(client, voteClientName, sizeof(voteClientName));
-            PrintToChatAll("[Source Vote] %s start new campaign is not allowed on this server", voteClientName);
+            PrintToChatAll("[SourceVote] %s start new campaign is not allowed on this server", voteClientName);
             return Plugin_Stop;
         }
     }
@@ -550,7 +550,7 @@ public Action CommandStartVote(int client, int args)
 
     InitMapVote();
 
-    PrintToChat(client, "[Source Vote] Vote started");
+    PrintToChat(client, "[SourceVote] Vote started");
 
     return Plugin_Handled;
 }
@@ -569,9 +569,9 @@ public Action CommandSourceVoteReload(int client, int args)
     ReadConfigs();
 
     if (client == 0)
-        PrintToServer("[Source Vote] Variables reloaded.");
+        PrintToServer("[SourceVote] Variables reloaded.");
     else
-        PrintToChat(client, "[Source Vote] Variables reloaded.");
+        PrintToChat(client, "[SourceVote] Variables reloaded.");
 
     return Plugin_Handled;
 }
@@ -596,13 +596,13 @@ public Action CommandBan(int client, int args)
     int bannedClient = GetCmdArgInt(1);
     if (bannedClient == 0)
     {
-        PrintToChat(client, "[Source Vote] startban usage: startban <userid> <reason>");
+        PrintToChat(client, "[SourceVote] startban usage: startban <userid> <reason>");
         return Plugin_Stop;
     }
 
     if (!IsValidClient(bannedClient))
     {
-        PrintToChat(client, "[Source Vote] Client is invalid.");
+        PrintToChat(client, "[SourceVote] Client is invalid.");
         return Plugin_Stop;
     }
 
@@ -637,7 +637,7 @@ void ShowPlayerSelectMenu(int client)
 
     if (menu.ItemCount == 0)
     {
-        PrintToChat(client, "[Source Vote] No avaible players to ban.");
+        PrintToChat(client, "[SourceVote] No avaible players to ban.");
         delete menu;
         return;
     }
@@ -656,7 +656,7 @@ void MenuHandler_PlayerSelect(Menu menu, MenuAction action, int client, int para
         int bannedClient = GetClientOfUserId(StringToInt(userId));
         if (bannedClient == 0 || !IsValidClient(bannedClient))
         {
-            PrintToChat(client, "[Source Vote] Player not found.");
+            PrintToChat(client, "[SourceVote] Player not found.");
         }
 
         gv_BanTargetMap[client] = bannedClient;
@@ -693,7 +693,7 @@ void MenuHandler_ReasonSelect(Menu menu, MenuAction action, int client, int para
         int bannedClient = gv_BanTargetMap[client];
         if (!IsValidClient(bannedClient))
         {
-            PrintToChat(client, "[Source Vote] Invalid player.");
+            PrintToChat(client, "[SourceVote] Invalid player.");
         }
 
         gv_BanTargetMap[client] = 0;
@@ -724,8 +724,8 @@ void ExecuteBan(int client, int bannedClient, const char[] reason)
 
     if (file == INVALID_HANDLE)
     {
-        PrintToServer("[Source Vote] Failed to open file: %s", gv_BanPath);
-        PrintToServer("[Source Vote] FileExists=%d", FileExists(gv_BanPath));
+        PrintToServer("[SourceVote] Failed to open file: %s", gv_BanPath);
+        PrintToServer("[SourceVote] FileExists=%d", FileExists(gv_BanPath));
         return;
     }
 
@@ -735,7 +735,7 @@ void ExecuteBan(int client, int bannedClient, const char[] reason)
 
     ServerCommand("banid 0 %s kick", steamId);
     KickClient(bannedClient, "You have been permanently banned. Reason: %s");
-    PrintToChat(client, "[Source Vote] Player permantly banned. Reason: %s", reason);
+    PrintToChat(client, "[SourceVote] Player permantly banned. Reason: %s", reason);
 }
 // #endregion Ban
 //
@@ -771,7 +771,7 @@ public void RoundEndSurvivalVersus(Event event, const char[] name, bool dontBroa
     if (!gv_ShouldMapVote)
     {
         gv_ShouldMapVote = true;
-        PrintToServer("[Source Vote] First round ended, next round map vote will be called");
+        PrintToServer("[SourceVote] First round ended, next round map vote will be called");
         return;
     }
     gv_ShouldMapVote = false;
@@ -910,7 +910,7 @@ public void GenerateMapVote()
     }
 
     if (gv_ShouldDebug)
-        PrintToServer("[Source Vote] Cleaned votes variables");
+        PrintToServer("[SourceVote] Cleaned votes variables");
 
     // Map count is lower than MAX_VOTE_MAPS
     // so we add all available maps index to the variable
@@ -921,7 +921,7 @@ public void GenerateMapVote()
             gv_AvailableMapIndexesVotes[i] = i;
 
             if (gv_ShouldDebug)
-                PrintToServer("[Source Vote] Fixed map added to random: %s", gv_MapNames[gv_AvailableMapIndexesVotes[i]]);
+                PrintToServer("[SourceVote] Fixed map added to random: %s", gv_MapNames[gv_AvailableMapIndexesVotes[i]]);
         }
     }
     // Random pickup map indexs
@@ -945,14 +945,14 @@ public void GenerateMapVote()
             availableMapIndexesVotesCount++;
 
             if (gv_ShouldDebug)
-                PrintToServer("[Source Vote] New map added to random: %s", gv_MapNames[randomIndex]);
+                PrintToServer("[SourceVote] New map added to random: %s", gv_MapNames[randomIndex]);
 
             if (availableMapIndexesVotesCount >= MAX_VOTE_MAPS - 1) break;
         }
     }
 
     if (gv_ShouldDebug)
-        PrintToServer("[Source Vote] Maps randomized");
+        PrintToServer("[SourceVote] Maps randomized");
 }
 
 public void InitMapVote()
@@ -982,7 +982,7 @@ public void InitMapVote()
                     if ((StrEqual(gv_Gamemode, "mutation15") || StrEqual(gv_Gamemode, "survival")) && gv_MapCount >= MAX_VOTE_MAPS)
                     {
                         if (gv_ShouldDebug)
-                            PrintToServer("[Source Vote] Survival detected, trying to create rematch...");
+                            PrintToServer("[SourceVote] Survival detected, trying to create rematch...");
 
                         char mapCode[64];
                         GetCurrentMap(mapCode, sizeof(mapCode));
@@ -992,7 +992,7 @@ public void InitMapVote()
                         for (int x = 0; x < gv_MapCount; x++)
                         {
                             if (gv_ShouldDebug)
-                                PrintToServer("[Source Vote] STRINGS DIFFERENCE: %s, %s", gv_MapCodes[x], mapCode);
+                                PrintToServer("[SourceVote] STRINGS DIFFERENCE: %s, %s", gv_MapCodes[x], mapCode);
                             if (StrEqual(gv_MapCodes[x], mapCode))
                             {
                                 mapIndex = x;
@@ -1018,18 +1018,18 @@ public void InitMapVote()
                             gv_AvailableMapIndexesVotes[j] = mapIndex;
 
                             if (gv_ShouldDebug)
-                                PrintToServer("[Source Vote] Rematch created for client: %d, map: %s", client, gv_MapNames[mapIndex]);
+                                PrintToServer("[SourceVote] Rematch created for client: %d, map: %s", client, gv_MapNames[mapIndex]);
                             continue;
                         }
                         else {
                             if (gv_ShouldDebug)
-                                PrintToServer("[Source Vote] FAILED TO CREATE REMATCH FOR: %d", client);
+                                PrintToServer("[SourceVote] FAILED TO CREATE REMATCH FOR: %d", client);
                         }
                     }
                 }
                 else if (StrEqual("nmrih", gv_Game)) {
                     if (gv_ShouldDebug)
-                        PrintToServer("[Source Vote] trying to create rematch...");
+                        PrintToServer("[SourceVote] trying to create rematch...");
 
                     char mapCode[64];
                     GetCurrentMap(mapCode, sizeof(mapCode));
@@ -1039,7 +1039,7 @@ public void InitMapVote()
                     for (int x = 0; x < gv_MapCount; x++)
                     {
                         if (gv_ShouldDebug)
-                            PrintToServer("[Source Vote] STRINGS DIFFERENCE: %s, %s", gv_MapCodes[x], mapCode);
+                            PrintToServer("[SourceVote] STRINGS DIFFERENCE: %s, %s", gv_MapCodes[x], mapCode);
                         if (StrEqual(gv_MapCodes[x], mapCode))
                         {
                             mapIndex = x;
@@ -1058,12 +1058,12 @@ public void InitMapVote()
                         gv_AvailableMapIndexesVotes[j] = mapIndex;
 
                         if (gv_ShouldDebug)
-                            PrintToServer("[Source Vote] Rematch created for client: %d, map: %s", client, gv_MapNames[mapIndex]);
+                            PrintToServer("[SourceVote] Rematch created for client: %d, map: %s", client, gv_MapNames[mapIndex]);
                         continue;
                     }
                     else {
                         if (gv_ShouldDebug)
-                            PrintToServer("[Source Vote] FAILED TO CREATE REMATCH FOR: %d", client);
+                            PrintToServer("[SourceVote] FAILED TO CREATE REMATCH FOR: %d", client);
                     }
                 }
             }
@@ -1079,7 +1079,7 @@ public void InitMapVote()
 
         menu.Display(client, gv_SecondsToVote);
 
-        PrintToServer("[Source Vote] Menu generated for: %d", client);
+        PrintToServer("[SourceVote] Menu generated for: %d", client);
     }
 
     CreateTimer(float(gv_SecondsToVote + 1), VoteFinish, 0, TIMER_FLAG_NO_MAPCHANGE);
@@ -1100,7 +1100,7 @@ public int VoteMenuHandler(Menu menu, MenuAction action, int client, int param)
         strcopy(chosenMapName, sizeof(chosenMapName), gv_MapNames[mapIndex]);
 
         PrintToChat(client, "Voted #%d: %s", selection + 1, chosenMapName);
-        PrintToServer("[Source Vote] %d voted to: %s", client, gv_MapCodes[mapIndex]);
+        PrintToServer("[SourceVote] %d voted to: %s", client, gv_MapCodes[mapIndex]);
     }
     return 0;
 }
@@ -1122,7 +1122,7 @@ public Action VoteFinish(Handle timer)
 
     if (winnerIndex == -1)
     {
-        PrintToServer("[Source Vote] No votes registered.");
+        PrintToServer("[SourceVote] No votes registered.");
 
         // Left 4 Dead 2 Handling
         if (StrEqual("left4dead2", gv_Game))
@@ -1146,19 +1146,19 @@ public Action VoteFinish(Handle timer)
             winnerIndex = GetRandomInt(0, MAX_VOTE_MAPS - 1);
         }
 
-        PrintToServer("[Source Vote] Random map selected: %d", winnerIndex);
+        PrintToServer("[SourceVote] Random map selected: %d", winnerIndex);
     }
     else {
-        PrintToServer("[Source Vote] Player map selected: %d", winnerIndex);
+        PrintToServer("[SourceVote] Player map selected: %d", winnerIndex);
     }
 
     int mapIndex = gv_AvailableMapIndexesVotes[winnerIndex];
 
-    PrintToServer("[Source Vote] Next Map Index: %d", mapIndex);
+    PrintToServer("[SourceVote] Next Map Index: %d", mapIndex);
 
     strcopy(gv_VotedMapCode, sizeof(gv_VotedMapCode), gv_MapCodes[mapIndex]);
 
-    PrintToServer("[Source Vote] Next Map Code: %s", gv_VotedMapCode);
+    PrintToServer("[SourceVote] Next Map Code: %s", gv_VotedMapCode);
 
     PrintToChatAll("Most voted map: %s with %d votes.", gv_MapNames[mapIndex], maxVotes);
 
@@ -1169,11 +1169,11 @@ public Action VoteFinish(Handle timer)
 
         if (!StrEqual(currentMap, gv_VotedMapCode))
         {
-            PrintToServer("[Source Vote] Map code is not the same, %s / %s", currentMap, gv_VotedMapCode);
+            PrintToServer("[SourceVote] Map code is not the same, %s / %s", currentMap, gv_VotedMapCode);
             CreateTimer(2.0, VoteChangeLevelTimer);
         }
         else {
-            PrintToServer("[Source Vote] Map code is the same, ignoring...");
+            PrintToServer("[SourceVote] Map code is the same, ignoring...");
         }
     }
     else {
