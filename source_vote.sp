@@ -344,7 +344,7 @@ void ReadConfigs()
     }
     if (gv_DisableBackToLobbyProtection)
     {
-        PrintToServer("[SourceVote] vote back to lobby protection is enabled");
+        PrintToServer("[SourceVote] vote back to lobby and restart campaign protection is enabled");
         AddCommandListener(Votebacktolobby_Protection, "callvote");
     }
     // #endregion Protections
@@ -429,14 +429,14 @@ public void OnPluginStart()
         1.0      // max value
     );
 
+    AddCommandListener(Vote_Print, "callvote");
+
     ReadVariables();
     ReadConfigs();
 
     RegConsoleCmd("startvote", CommandStartVote, "Start voting system");
     RegConsoleCmd("startban", CommandBan, "Ban someone");
     RegConsoleCmd("sourcevotereload", CommandSourceVoteReload, "Reload Cvars and Configs");
-
-    AddCommandListener(Vote_Print, "callvote");
 
     PrintToServer("[SourceVote] initialized");
 }
@@ -467,7 +467,7 @@ public Action Votekick_Protection(int client, const char[] command, int argc)
     if (StrEqual(command, "callvote") && argc == 2)
     {
         // Start new campaign command
-        if (StrEqual("L4D2C1", targetRaw))
+        if (StrContains(targetRaw, "L4D") == 0)
             return Plugin_Continue;
 
         int kickedClient = GetClientOfUserId(StringToInt(targetRaw));
@@ -514,7 +514,7 @@ public Action Votebacktolobby_Protection(int client, const char[] command, int a
         {
             char voteClientName[128];
             GetClientName(client, voteClientName, sizeof(voteClientName));
-            PrintToChatAll("[SourceVote] %s back to lobby is not allowed on this server", voteClientName);
+            PrintToChatAll("[SourceVote] %s back to lobby and restart campaign is not allowed on this server", voteClientName);
             return Plugin_Stop
         }
     }
@@ -522,7 +522,7 @@ public Action Votebacktolobby_Protection(int client, const char[] command, int a
     else if (StrEqual(command, "callvote") && argc == 2)
     {
         // Start new campaign command
-        if (StrEqual("L4D2C1", targetRaw))
+        if (StrContains(targetRaw, "L4D") == 0)
         {
             char voteClientName[128];
             GetClientName(client, voteClientName, sizeof(voteClientName));
@@ -816,7 +816,7 @@ public void OnPlayerDeath(Event event, const char[] name, bool dontBroadcast)
     {
         char clientName[128];
         GetClientName(client, clientName, sizeof(clientName));
-        PrintToServer("[Source Vote-OnPlayerDeath] %s IsDeadPlayer: %b", clientName, gv_NMRIH_IsDeadPlayer[client]);
+        PrintToServer("[SourceVote-OnPlayerDeath] %s IsDeadPlayer: %b", clientName, gv_NMRIH_IsDeadPlayer[client]);
     }
 
     for (int i = 1; i <= MaxClients; i++)
@@ -830,7 +830,7 @@ public void OnPlayerDeath(Event event, const char[] name, bool dontBroadcast)
             {
                 char clientName[128];
                 GetClientName(i, clientName, sizeof(clientName));
-                PrintToServer("[Source Vote-OnPlayerDeath] %s is alive ignoring map vote");
+                PrintToServer("[SourceVote-OnPlayerDeath] %s is alive ignoring map vote");
             }
             return;
         }
@@ -856,7 +856,6 @@ public void OnPlayerSpawn(Event event, const char[] name, bool dontBroadcast)
     {
         char clientName[128];
         GetClientName(client, clientName, sizeof(clientName));
-        PrintToServer("[Source Vote-OnPlayerSpawn] %s IsDeadPlayer: %b", clientName, gv_NMRIH_IsDeadPlayer[client]);
     }
 }
 
@@ -868,7 +867,6 @@ public bool OnClientConnect(int client, char[] rejectmsg, int maxlen)
     {
         char clientName[128];
         GetClientName(client, clientName, sizeof(clientName));
-        PrintToServer("[Source Vote-OnClientConnect] %s IsDeadPlayer: %b", clientName, gv_NMRIH_IsDeadPlayer[client]);
     }
 
     return true;
@@ -882,7 +880,6 @@ public void OnClientDisconnect(int client)
     {
         char clientName[128];
         GetClientName(client, clientName, sizeof(clientName));
-        PrintToServer("[Source Vote-OnClientDisconnect] %s IsDeadPlayer: %b", clientName, gv_NMRIH_IsDeadPlayer[client]);
     }
 }
 
