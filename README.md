@@ -56,8 +56,6 @@ To view userid you can use the command ``status`` in game console
 
 4. (Left 4 Dead 2 Survival Servers) Add to server.cfg: ``sm_cvar sv_pz_endgame_vote_post_period 30``, for survival versus and versus vote system work propertly
 
-5. (No More Room in Hell) Disable tokens to prevent incorrect map votes.
-
 5. Run the server
 
 ## Compiling

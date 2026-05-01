@@ -9,32 +9,33 @@ public Plugin myinfo =
     url         = "https://github.com/LeandroTheDev/source_vote"
 };
 
-static bool gv_NMRIH_IsDeadPlayer[MAXPLAYERS];
+bool   gv_NMRIH_IsDeadPlayer[MAXPLAYERS];
+int    gv_NMRIH_PlayerTokens[MAXPLAYERS];
 
-int         gv_BanTargetMap[MAXPLAYERS];
-bool        gv_ShouldDebug = false;
-int         gv_MapCount    = 0;
-char        gv_MapCodes[99][64];
-char        gv_MapNames[99][64];
-char        gv_BanPath[PLATFORM_MAX_PATH];
-char        gv_VotePath[PLATFORM_MAX_PATH];
-int         gv_SecondsToVote                  = 10;
-bool        gv_DisableMapVote                 = false;
-bool        gv_DisableAdminVoteKickProtection = false;
-bool        gv_DisableBackToLobbyProtection   = false;
+int    gv_BanTargetMap[MAXPLAYERS];
+bool   gv_ShouldDebug = false;
+int    gv_MapCount    = 0;
+char   gv_MapCodes[99][64];
+char   gv_MapNames[99][64];
+char   gv_BanPath[PLATFORM_MAX_PATH];
+char   gv_VotePath[PLATFORM_MAX_PATH];
+int    gv_SecondsToVote                  = 10;
+bool   gv_DisableMapVote                 = false;
+bool   gv_DisableAdminVoteKickProtection = false;
+bool   gv_DisableBackToLobbyProtection   = false;
 
-char        gv_Gamemode[64];
-char        gv_Game[64];
+char   gv_Gamemode[64];
+char   gv_Game[64];
 
-ConVar      g_ShouldDebug;
-ConVar      g_VotePath;
-ConVar      g_BanFilePath;
-ConVar      g_SecondsToVote;
-ConVar      g_DisableMapVote;
-ConVar      g_DisableAdminVoteKickProtection;
-ConVar      g_DisableBackToLobbyProtection;
+ConVar g_ShouldDebug;
+ConVar g_VotePath;
+ConVar g_BanFilePath;
+ConVar g_SecondsToVote;
+ConVar g_DisableMapVote;
+ConVar g_DisableAdminVoteKickProtection;
+ConVar g_DisableBackToLobbyProtection;
 
-void        ReadVariables()
+void   ReadVariables()
 {
     gv_ShouldDebug = g_ShouldDebug.BoolValue;
     PrintToServer("[SourceVote] Should debug is enabled: %b", gv_ShouldDebug);
@@ -69,6 +70,15 @@ void        ReadVariables()
     PrintToServer("[SourceVote] Back to lobby protection is disabled: %b", gv_DisableBackToLobbyProtection);
 }
 
+bool gvf_Hooked_L4D2_VersusMatchFinished  = false;
+bool gvf_Hooked_L4D2_RoundEndSurvivalVers = false;
+bool gvf_Hooked_L4D2_RoundEndSurvival     = false;
+bool gvf_Hooked_L4D2_FinaleStart          = false;
+bool gvf_Hooked_NMRIH_PlayerDeath         = false;
+bool gvf_Hooked_NMRIH_PlayerSpawn         = false;
+bool gvf_Hooked_NMRIH_ExtractionComplete  = false;
+bool gvf_Hooked_NMRIH_TokenEarned         = false;
+bool gvf_Hooked_NMRIH_MapComplete         = false;
 void ReadConfigs()
 {
     // #region Default Configuration Creation
@@ -302,33 +312,44 @@ void ReadConfigs()
     // #region Map Vote
     if (gv_DisableMapVote == false)
     {
+        SafeUnhook("versus_match_finished", RoundEndBasic, EventHookMode_Post, gvf_Hooked_L4D2_VersusMatchFinished);
+        SafeUnhook("round_end", RoundEndSurvivalVersus, EventHookMode_Post, gvf_Hooked_L4D2_RoundEndSurvivalVers);
+        SafeUnhook("round_end", RoundEndSurvival, EventHookMode_Post, gvf_Hooked_L4D2_RoundEndSurvival);
+        SafeUnhook("finale_start", RoundEndBasic, EventHookMode_Post, gvf_Hooked_L4D2_FinaleStart);
+        SafeUnhook("player_death", OnPlayerDeath, EventHookMode_Post, gvf_Hooked_NMRIH_PlayerDeath);
+        SafeUnhook("player_spawn", OnPlayerSpawn, EventHookMode_Post, gvf_Hooked_NMRIH_PlayerSpawn);
+        SafeUnhook("extraction_complete", RoundEndBasic, EventHookMode_Post, gvf_Hooked_NMRIH_ExtractionComplete);
+        SafeUnhook("token_earned", OnPlayerReceiveToken, EventHookMode_Post, gvf_Hooked_NMRIH_TokenEarned);
+        SafeUnhook("map_complete", FunctionTest, EventHookMode_Post, gvf_Hooked_NMRIH_MapComplete);
+
         if (StrEqual(gv_Game, "left4dead2"))
         {
             if (StrEqual(gv_Gamemode, "versus"))
             {
                 PrintToServer("[SourceVote] versus detected");
-                HookEventEx("versus_match_finished", RoundEndBasic, EventHookMode_Post);
+                SafeHook("versus_match_finished", RoundEndBasic, EventHookMode_Post, gvf_Hooked_L4D2_VersusMatchFinished);
             }
             else if (StrEqual(gv_Gamemode, "mutation15")) {
                 PrintToServer("[SourceVote] survival versus detected");
-                HookEventEx("round_end", RoundEndSurvivalVersus, EventHookMode_Post);
+                SafeHook("round_end", RoundEndSurvivalVersus, EventHookMode_Post, gvf_Hooked_L4D2_RoundEndSurvivalVers);
             }
             else if (StrEqual(gv_Gamemode, "survival")) {
                 PrintToServer("[SourceVote] survival detected");
-                HookEventEx("round_end", RoundEndSurvival, EventHookMode_Post);
+                SafeHook("round_end", RoundEndSurvival, EventHookMode_Post, gvf_Hooked_L4D2_RoundEndSurvival);
             }
             else if (StrEqual(gv_Gamemode, "coop")) {
                 PrintToServer("[SourceVote] coop detected");
-                HookEventEx("finale_start", RoundEndBasic, EventHookMode_Post);
+                SafeHook("finale_start", RoundEndBasic, EventHookMode_Post, gvf_Hooked_L4D2_FinaleStart);
             }
             else
                 PrintToServer("[SourceVote] Unsuported gv_Gamemode: %s", gv_Gamemode);
         }
         else if (StrEqual(gv_Game, "nmrih")) {
-            HookEvent("player_death", OnPlayerDeath, EventHookMode_PostNoCopy);
-            HookEvent("player_spawn", OnPlayerSpawn, EventHookMode_PostNoCopy);
-            HookEvent("extraction_complete", RoundEndBasic, EventHookMode_PostNoCopy);
-            HookEvent("map_complete", FunctionTest, EventHookMode_PostNoCopy);
+            SafeHook("player_death", OnPlayerDeath, EventHookMode_Post, gvf_Hooked_NMRIH_PlayerDeath);
+            SafeHook("player_spawn", OnPlayerSpawn, EventHookMode_Post, gvf_Hooked_NMRIH_PlayerSpawn);
+            SafeHook("extraction_complete", RoundEndBasic, EventHookMode_Post, gvf_Hooked_NMRIH_ExtractionComplete);
+            SafeHook("token_earned", OnPlayerReceiveToken, EventHookMode_Post, gvf_Hooked_NMRIH_TokenEarned);
+            SafeHook("map_complete", FunctionTest, EventHookMode_Post, gvf_Hooked_NMRIH_MapComplete);
         }
         else if (StrEqual(gv_Game, "tf")) {
             // teamplay_game_over ???
@@ -348,6 +369,24 @@ void ReadConfigs()
         AddCommandListener(Votebacktolobby_Protection, "callvote");
     }
     // #endregion Protections
+}
+
+void SafeHook(const char[] event, EventHook callback, EventHookMode mode, bool& state)
+{
+    if (!state)
+    {
+        HookEventEx(event, callback, mode);
+        state = true;
+    }
+}
+
+void SafeUnhook(const char[] event, EventHook callback, EventHookMode mode, bool& state)
+{
+    if (state)
+    {
+        UnhookEvent(event, callback, mode);
+        state = false;
+    }
 }
 
 public void OnPluginStart()
@@ -811,6 +850,9 @@ public void OnPlayerDeath(Event event, const char[] name, bool dontBroadcast)
         return;
     }
 
+    if (gv_NMRIH_PlayerTokens[client] > 0)
+        return;
+
     gv_NMRIH_IsDeadPlayer[client] = true;
     if (gv_ShouldDebug)
     {
@@ -859,15 +901,17 @@ public void OnPlayerSpawn(Event event, const char[] name, bool dontBroadcast)
     }
 }
 
+public void OnPlayerReceiveToken(Event event, const char[] name, bool dontBroadcast)
+{
+    int userId                    = event.GetInt("player_id");
+    int client                    = GetClientOfUserId(userId);
+
+    gv_NMRIH_PlayerTokens[client] = event.GetInt("tokens");
+}
+
 public bool OnClientConnect(int client, char[] rejectmsg, int maxlen)
 {
     gv_NMRIH_IsDeadPlayer[client] = true;
-
-    if (gv_ShouldDebug)
-    {
-        char clientName[128];
-        GetClientName(client, clientName, sizeof(clientName));
-    }
 
     return true;
 }
@@ -875,12 +919,6 @@ public bool OnClientConnect(int client, char[] rejectmsg, int maxlen)
 public void OnClientDisconnect(int client)
 {
     gv_NMRIH_IsDeadPlayer[client] = false;
-
-    if (gv_ShouldDebug)
-    {
-        char clientName[128];
-        GetClientName(client, clientName, sizeof(clientName));
-    }
 }
 
 public void FunctionTest(Event event, const char[] name, bool dontBroadcast)
