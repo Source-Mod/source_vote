@@ -843,15 +843,16 @@ public void RoundEndSurvival(Event event, const char[] name, bool dontBroadcast)
 public void OnPlayerDeath(Event event, const char[] name, bool dontBroadcast)
 {
     int userid = event.GetInt("userid");
-
     int client = GetClientOfUserId(userid);
-    if (!IsValidClient(client))
-    {
+
+    if (client == 0)
         return;
-    }
 
     if (gv_NMRIH_PlayerTokens[client] > 0)
+    {
+        gv_NMRIH_PlayerTokens[client] = gv_NMRIH_PlayerTokens[client] - 1;
         return;
+    }
 
     gv_NMRIH_IsDeadPlayer[client] = true;
     if (gv_ShouldDebug)
@@ -885,28 +886,19 @@ public void OnPlayerDeath(Event event, const char[] name, bool dontBroadcast)
 public void OnPlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 {
     int userid = event.GetInt("userid");
-
     int client = GetClientOfUserId(userid);
-    if (!IsValidClient(client))
-    {
+
+    if (client == 0)
         return;
-    }
 
     gv_NMRIH_IsDeadPlayer[client] = false;
-
-    if (gv_ShouldDebug)
-    {
-        char clientName[128];
-        GetClientName(client, clientName, sizeof(clientName));
-    }
 }
 
 public void OnPlayerReceiveToken(Event event, const char[] name, bool dontBroadcast)
 {
-    int userId                    = event.GetInt("player_id");
-    int client                    = GetClientOfUserId(userId);
-
-    gv_NMRIH_PlayerTokens[client] = event.GetInt("tokens");
+    int client = event.GetInt("player_id");
+    if (client > 0)
+        gv_NMRIH_PlayerTokens[client] = event.GetInt("tokens");
 }
 
 public bool OnClientConnect(int client, char[] rejectmsg, int maxlen)
