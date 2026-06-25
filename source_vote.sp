@@ -392,7 +392,7 @@ void SafeUnhook(const char[] event, EventHook callback, EventHookMode mode, bool
 public void OnPluginStart()
 {
     g_ShouldDebug = CreateConVar(
-        "sourceVote_Debug",
+        "sourceVoteDebug",
         "0",    // default value
         "Should Debug",
         FCVAR_NONE,
@@ -403,7 +403,7 @@ public void OnPluginStart()
     );
 
     g_VotePath = CreateConVar(
-        "sourceVote_VoteFile",
+        "sourceVoteVoteFile",
         "addons/sourcemod/configs/source_vote.cfg",    // default value
         "Vote File",
         FCVAR_NONE,
@@ -414,7 +414,7 @@ public void OnPluginStart()
     );
 
     g_BanFilePath = CreateConVar(
-        "sourceVote_BanFile",
+        "sourceVoteBanFile",
         "cfg/bans.cfg",    // default value
         "Ban File",
         FCVAR_NONE,
@@ -425,7 +425,7 @@ public void OnPluginStart()
     );
 
     g_SecondsToVote = CreateConVar(
-        "sourceVote_SecondsToVote",
+        "sourceVoteSecondsToVote",
         "10",    // default value
         "Seconds To Vote",
         FCVAR_NONE,
@@ -436,7 +436,7 @@ public void OnPluginStart()
     );
 
     g_DisableMapVote = CreateConVar(
-        "sourceVote_DisableMapVote",
+        "sourceVoteDisableMapVote",
         "0",    // default value
         "Disable Map Vote",
         FCVAR_NONE,
@@ -447,7 +447,7 @@ public void OnPluginStart()
     );
 
     g_DisableAdminVoteKickProtection = CreateConVar(
-        "sourceVote_DisableAdminVoteKickProtection",
+        "sourceVoteDisableAdminVoteKickProtection",
         "0",    // default value
         "Disable Admin Vote Kick Protection",
         FCVAR_NONE,
@@ -458,7 +458,7 @@ public void OnPluginStart()
     );
 
     g_DisableBackToLobbyProtection = CreateConVar(
-        "sourceVote_DisableBackToLobbyProtection",
+        "sourceVoteDisableBackToLobbyProtection",
         "0",    // default value
         "Disable Back To Lobby Protection",
         FCVAR_NONE,

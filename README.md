@@ -6,10 +6,10 @@
 Creates map vote system when coop/versus/survival/survivalversus ends
 
 - ``startvote`` start voting system only admins with the flag "g"
-- ``sm_cvar sourceVote_VoteFile "addons/sourcemod/configs/source_vote.cfg"`` change the vote file.
-- ``sm_cvar sourceVote_SecondsToVote 10`` change the seconds to vote for a map.
+- ``sm_cvar sourceVoteVoteFile "addons/sourcemod/configs/source_vote.cfg"`` change the vote file.
+- ``sm_cvar sourceVoteSecondsToVote 10`` change the seconds to vote for a map.
 
-To disable exec ``sm_cvar sourceVote_DisableMapVote 1``
+To disable exec ``sm_cvar sourceVoteDisableMapVote 1``
 
 ### How it works
 - After the end of the round the server will ask for a map vote, the maps to vote is randomly selected between the map list.
@@ -20,7 +20,7 @@ To disable exec ``sm_cvar sourceVote_DisableMapVote 1``
 ## Vote Kick Protection
 Protects admins from being vote kicked, also when admin call a kick vote insta kicks the player without vote
 
-To disable exec ``sm_cvar sourceVote_DisableAdminVoteKickProtection 1``
+To disable exec ``sm_cvar sourceVoteDisableAdminVoteKickProtection 1``
 
 ### How it works
 - The plugin listen for the call vote and check the caller and the kicker privileges
@@ -28,20 +28,36 @@ To disable exec ``sm_cvar sourceVote_DisableAdminVoteKickProtection 1``
 ## Vote Back To Lobby Protection
 Remove the back to lobby call vote, and show a message to the player saying this feature is disabled on the server, if the client has the flag ADMFLAG_CHANGEMAP ("g") he can use the vote to lobby
 
-To disable exec ``sm_cvar sourceVote_DisableBackToLobbyProtection 1``
+To disable exec ``sm_cvar sourceVoteDisableBackToLobbyProtection 1``
 
 ### How it works
 - The plugin listen for the call vote and stop before working
 
 ## Ban
-``!startban <userid> <"Cheating in versus mode">`` command to ban players with given userid, the ban will automatically go to the ``sm_cvar sourceVote_BanFile "cfg/bans.cfg"`` includes the comment saying the reason, game and ban date, a menu is also available by using only ``!startban``
+``!startban <userid> <"Cheating in versus mode">`` command to ban players with given userid, the ban will automatically go to the ``sm_cvar sourceVoteBanFile "cfg/bans.cfg"`` includes the comment saying the reason, game and ban date, a menu is also available by using only ``!startban``
 
 The command requires the admin flag: "d"
 
 To view userid you can use the command ``status`` in game console
 
 ### How it works
-- Plugin execute the command ``banid 0 "steamid..." kick`` to ban the player, and also include that command in ``sm_cvar sourceVote_BanFile "cfg/bans.cfg"``, but you will need to exec the cfg on ``server.cfg`` -> ``exec bans.cfg``
+- Plugin execute the command ``banid 0 "steamid..." kick`` to ban the player, and also include that command in ``sm_cvar sourceVoteBanFile "cfg/bans.cfg"``, but you will need to exec the cfg on ``server.cfg`` -> ``exec bans.cfg``
+
+## CVARS
+- sourceVoteDebug
+- > Enable debug logging
+- sourceVoteVoteFile
+- > Vote file path
+- sourceVoteBanFile
+- > Ban file path
+- sourceVoteSecondsToVote
+- > Seconds to vote for a map
+- sourceVoteDisableMapVote
+- > Disable map vote system
+- sourceVoteDisableAdminVoteKickProtection
+- > Disable admin vote kick protection
+- sourceVoteDisableBackToLobbyProtection
+- > Disable back to lobby and restart campaign protection
 
 ## Requirements
 - Sourcemod and metamod
