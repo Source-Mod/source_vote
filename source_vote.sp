@@ -92,10 +92,10 @@ void ReadConfigs()
                 WriteFileLine(file, "\"SourceVote\"");
                 WriteFileLine(file, "{");
 
-                WriteFileLine(file, "    \"gv_MapCount\"       \"5\"");
+                WriteFileLine(file, "    \"mapCount\"       \"5\"");
                 WriteFileLine(file, "");
 
-                WriteFileLine(file, "    \"gv_MapCodes\"");
+                WriteFileLine(file, "    \"mapCodes\"");
                 WriteFileLine(file, "    {");
                 WriteFileLine(file, "        \"0\"  \"c1m1_hotel\"");
                 WriteFileLine(file, "        \"1\"  \"c2m1_highway\"");
@@ -105,7 +105,7 @@ void ReadConfigs()
                 WriteFileLine(file, "    }");
                 WriteFileLine(file, "");
 
-                WriteFileLine(file, "    \"gv_MapNames\"");
+                WriteFileLine(file, "    \"mapNames\"");
                 WriteFileLine(file, "    {");
                 WriteFileLine(file, "        \"0\"  \"Dead Center\"");
                 WriteFileLine(file, "        \"1\"  \"Dark Carnival\"");
@@ -120,10 +120,10 @@ void ReadConfigs()
                 WriteFileLine(file, "\"SourceVote\"");
                 WriteFileLine(file, "{");
 
-                WriteFileLine(file, "    \"gv_MapCount\"       \"34\"");
+                WriteFileLine(file, "    \"mapCount\"       \"34\"");
                 WriteFileLine(file, "");
 
-                WriteFileLine(file, "    \"gv_MapCodes\"");
+                WriteFileLine(file, "    \"mapCodes\"");
                 WriteFileLine(file, "    {");
                 WriteFileLine(file, "        \"0\"  \"nmo_anxiety\"");
                 WriteFileLine(file, "        \"1\"  \"nmo_asylum\"");
@@ -162,7 +162,7 @@ void ReadConfigs()
                 WriteFileLine(file, "    }");
                 WriteFileLine(file, "");
 
-                WriteFileLine(file, "    \"gv_MapNames\"");
+                WriteFileLine(file, "    \"mapNames\"");
                 WriteFileLine(file, "    {");
                 WriteFileLine(file, "        \"0\"  \"Anxiety\"");
                 WriteFileLine(file, "        \"1\"  \"Asylum\"");
@@ -206,10 +206,10 @@ void ReadConfigs()
                 WriteFileLine(file, "\"SourceVote\"");
                 WriteFileLine(file, "{");
 
-                WriteFileLine(file, "    \"gv_MapCount\"       \"21\"");
+                WriteFileLine(file, "    \"mapCount\"       \"21\"");
                 WriteFileLine(file, "");
 
-                WriteFileLine(file, "    \"gv_MapCodes\"");
+                WriteFileLine(file, "    \"mapCodes\"");
                 WriteFileLine(file, "    {");
                 WriteFileLine(file, "        \"0\"  \"pl_badwater\"");
                 WriteFileLine(file, "        \"1\"  \"pl_barnblitz\"");
@@ -235,7 +235,7 @@ void ReadConfigs()
                 WriteFileLine(file, "    }");
                 WriteFileLine(file, "");
 
-                WriteFileLine(file, "    \"gv_MapNames\"");
+                WriteFileLine(file, "    \"mapNames\"");
                 WriteFileLine(file, "    {");
                 WriteFileLine(file, "        \"0\"  \"Bad Water\"");
                 WriteFileLine(file, "        \"1\"  \"Barn Blitzs\"");
@@ -283,34 +283,43 @@ void ReadConfigs()
     }
     // Loading from file
     else {
-        gv_MapCount = kv.GetNum("gv_MapCount", 5);
-        if (kv.JumpToKey("gv_MapCodes"))
+        gv_MapCount = kv.GetNum("mapCount", 5);
+        if (kv.JumpToKey("mapCodes"))
         {
             for (int i = 0; i < gv_MapCount; i++)
             {
                 char key[8];
                 Format(key, sizeof(key), "%d", i);
                 kv.GetString(key, gv_MapCodes[i], 64);
+                PrintToServer("[SourceVote] Map Code [%d]: %s", i, gv_MapCodes[i]);
             }
             kv.GoBack();
-            PrintToServer("[SourceVote] Map Codes Loaded!");
+            PrintToServer("[SourceVote] Map Codes Loaded: %d", gv_MapCount);
         }
-        if (kv.JumpToKey("gv_MapNames"))
+        else {
+            PrintToServer("[SourceVote] WARNING: mapCodes section not found in config!");
+        }
+        if (kv.JumpToKey("mapNames"))
         {
             for (int i = 0; i < gv_MapCount; i++)
             {
                 char key[8];
                 Format(key, sizeof(key), "%d", i);
                 kv.GetString(key, gv_MapNames[i], 64);
+                PrintToServer("[SourceVote] Map Name [%d]: %s", i, gv_MapNames[i]);
             }
             kv.GoBack();
-            PrintToServer("[SourceVote] Map Names Loaded!");
+            PrintToServer("[SourceVote] Map Names Loaded: %d", gv_MapCount);
+        }
+        else {
+            PrintToServer("[SourceVote] WARNING: mapNames section not found in config! Disabling map vote.");
+            gv_MapCount = 0;
         }
     }
     // #endregion Configuration Load
 
     // #region Map Vote
-    if (gv_DisableMapVote == false)
+    if (gv_DisableMapVote == false && gv_MapCount > 0)
     {
         SafeUnhook("versus_match_finished", RoundEndBasic, EventHookMode_Post, gvf_Hooked_L4D2_VersusMatchFinished);
         SafeUnhook("round_end", RoundEndSurvivalVersus, EventHookMode_Post, gvf_Hooked_L4D2_RoundEndSurvivalVers);
