@@ -499,39 +499,28 @@ public OnServerEnterHibernation()
 
 public Action Vote_Print(int client, const char[] command, int argc)
 {
+    char subcommand[64];
     char targetRaw[128];
+    GetCmdArg(1, subcommand, sizeof(subcommand));
     GetCmdArg(2, targetRaw, sizeof(targetRaw));
 
-    PrintToServer("[SourceVote] Someone called a callvote, command: %s, argument: %d, target: %s", command, argc, targetRaw);
+    PrintToServer("[SourceVote] Someone called a callvote, command: %s, subcommand: %s, argc: %d, target: %s", command, subcommand, argc, targetRaw);
     return Plugin_Continue;
 }
 
 public Action Votekick_Protection(int client, const char[] command, int argc)
 {
+    char subcommand[64];
     char targetRaw[128];
+    GetCmdArg(1, subcommand, sizeof(subcommand));
     GetCmdArg(2, targetRaw, sizeof(targetRaw));
 
     // Vote kick
-    if (StrEqual(command, "callvote") && argc == 2)
+    if (StrEqual(command, "callvote") && argc == 2 && StrEqual(subcommand, "kick", false))
     {
-        // Start new campaign command
-        if (StrContains(targetRaw, "L4D") == 0)
-            return Plugin_Continue;
-
         int kickedClient = GetClientOfUserId(StringToInt(targetRaw));
 
-        // Requested kick player is any admin
-        if (IsValidClient(client))
-        {
-            if (GetUserFlagBits(client) & ADMFLAG_GENERIC)
-            {
-                ServerCommand("kickid %d", StringToInt(targetRaw));
-                PrintToChat(client, "[SourceVote] User insta kicked because you are the admin");
-                return Plugin_Stop;
-            }
-        }
-
-        // Kicked player is any admin
+        // Kicked player is any admin — block regardless of who is kicking
         if (IsValidClient(kickedClient))
         {
             if (GetUserFlagBits(kickedClient) & ADMFLAG_GENERIC)
@@ -542,6 +531,17 @@ public Action Votekick_Protection(int client, const char[] command, int argc)
                 char steamId[32];
                 GetClientAuthId(client, AuthId_Steam2, steamId, sizeof(steamId));
                 PrintToChat(kickedClient, "[SourceVote] %s is trying to kick you, but you are any admin, show him some respect, their id: %s", kickerName, steamId);
+                return Plugin_Stop;
+            }
+        }
+
+        // Kicker has kick flag — insta kick (target is guaranteed non-admin at this point)
+        if (IsValidClient(client))
+        {
+            if (GetUserFlagBits(client) & ADMFLAG_KICK)
+            {
+                ServerCommand("kickid %d", StringToInt(targetRaw));
+                PrintToChat(client, "[SourceVote] User insta kicked because you have kick flag");
                 return Plugin_Stop;
             }
         }
@@ -562,7 +562,7 @@ public Action Votebacktolobby_Protection(int client, const char[] command, int a
         {
             char voteClientName[128];
             GetClientName(client, voteClientName, sizeof(voteClientName));
-            PrintToChatAll("[SourceVote] %s back to lobby and restart campaign is not allowed on this server", voteClientName);
+            PrintToChatAll("[SourceVote] %s back to lobby and restart is not allowed on this server", voteClientName);
             return Plugin_Stop
         }
     }
