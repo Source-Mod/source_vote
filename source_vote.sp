@@ -73,6 +73,7 @@ void   ReadVariables()
 bool gvf_Hooked_L4D2_VersusMatchFinished  = false;
 bool gvf_Hooked_L4D2_RoundEndSurvivalVers = false;
 bool gvf_Hooked_L4D2_RoundEndSurvival     = false;
+bool gvf_Hooked_L4D2_VersusRematchStart   = false;
 bool gvf_Hooked_L4D2_FinaleStart          = false;
 bool gvf_Hooked_NMRIH_PlayerDeath         = false;
 bool gvf_Hooked_NMRIH_PlayerSpawn         = false;
@@ -330,6 +331,7 @@ void ReadConfigs()
         SafeUnhook("extraction_complete", RoundEndBasic, EventHookMode_Post, gvf_Hooked_NMRIH_ExtractionComplete);
         SafeUnhook("token_earned", OnPlayerReceiveToken, EventHookMode_Post, gvf_Hooked_NMRIH_TokenEarned);
         SafeUnhook("map_complete", FunctionTest, EventHookMode_Post, gvf_Hooked_NMRIH_MapComplete);
+        SafeUnhookUserMsg("PZEndGamePanelMsg", VersusRematchStart, true, gvf_Hooked_L4D2_VersusRematchStart);
 
         if (StrEqual(gv_Game, "left4dead2"))
         {
@@ -341,6 +343,7 @@ void ReadConfigs()
             else if (StrEqual(gv_Gamemode, "mutation15")) {
                 PrintToServer("[SourceVote] survival versus detected");
                 SafeHook("round_end", RoundEndSurvivalVersus, EventHookMode_Post, gvf_Hooked_L4D2_RoundEndSurvivalVers);
+                SafeHookUserMsg("PZEndGamePanelMsg", VersusRematchStart, true, gvf_Hooked_L4D2_VersusRematchStart);
             }
             else if (StrEqual(gv_Gamemode, "survival")) {
                 PrintToServer("[SourceVote] survival detected");
@@ -395,6 +398,32 @@ void SafeUnhook(const char[] event, EventHook callback, EventHookMode mode, bool
     {
         UnhookEvent(event, callback, mode);
         state = false;
+    }
+}
+
+void SafeHookUserMsg(const char[] msgname, MsgHook callback, bool intercept, bool& state)
+{
+    if (!state)
+    {
+        UserMsg msgId = GetUserMessageId(msgname);
+        if (msgId != INVALID_MESSAGE_ID)
+        {
+            HookUserMessage(view_as<UserMsg>(msgId), callback, intercept);
+            state = true;
+        }
+    }
+}
+
+void SafeUnhookUserMsg(const char[] msgname, MsgHook callback, bool intercept, bool& state)
+{
+    if (state)
+    {
+        UserMsg msgId = GetUserMessageId(msgname);
+        if (msgId != INVALID_MESSAGE_ID)
+        {
+            UnhookUserMessage(view_as<UserMsg>(msgId), callback, intercept);
+            state = false;
+        }
     }
 }
 
@@ -782,7 +811,7 @@ void ExecuteBan(int client, int bannedClient, const char[] reason)
     CloseHandle(file);
 
     ServerCommand("banid 0 %s kick", steamId);
-    KickClient(bannedClient, "You have been permanently banned. Reason: %s");
+    KickClient(bannedClient, "You have been permanently banned. Reason: %s", reason);
     PrintToChat(client, "[SourceVote] Player permantly banned. Reason: %s", reason);
 }
 // #endregion Ban
@@ -801,8 +830,6 @@ public void RoundEndBasic(Event event, const char[] name, bool dontBroadcast)
 }
 
 // #region Left 4 Dead 2
-static bool gv_ShouldMapVote = false;
-
 public void RoundEndSurvivalVersus(Event event, const char[] name, bool dontBroadcast)
 {
     int reason = event.GetInt("reason");
@@ -816,17 +843,17 @@ public void RoundEndSurvivalVersus(Event event, const char[] name, bool dontBroa
     // Chapter ended
     if (reason == 6) return;
 
-    if (!gv_ShouldMapVote)
-    {
-        gv_ShouldMapVote = true;
-        PrintToServer("[SourceVote] First round ended, next round map vote will be called");
-        return;
-    }
-    gv_ShouldMapVote = false;
+    // if (!gv_ShouldMapVote)
+    // {
+    //     gv_ShouldMapVote = true;
+    //     PrintToServer("[SourceVote] First round ended, next round map vote will be called");
+    //     return;
+    // }
+    // gv_ShouldMapVote = false;
 
-    GenerateMapVote();
+    // GenerateMapVote();
 
-    InitMapVote();
+    // InitMapVote();
 }
 
 public void RoundEndSurvival(Event event, const char[] name, bool dontBroadcast)
@@ -845,6 +872,15 @@ public void RoundEndSurvival(Event event, const char[] name, bool dontBroadcast)
     GenerateMapVote();
 
     InitMapVote();
+}
+
+public Action VersusRematchStart(UserMsg msg_id, BfRead hMsg, const int[] players, int playersNum, bool reliable, bool init)
+{
+    PrintToServer("[Source Vote] Rematch called, generating vote system");
+    GenerateMapVote();
+
+    InitMapVote();
+    return Plugin_Handled;
 }
 // #endregion Left 4 Dead 2
 
