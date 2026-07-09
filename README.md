@@ -81,7 +81,7 @@ To view userid you can use the command ``status`` in game console
 ## CONFIGURATIONS EXAMPLE
 ``Versus or Coop``
 ```ini
-"Left4Rank"
+"SourceRank"
 {
     "mapCount"       "14"
 
@@ -125,9 +125,9 @@ To view userid you can use the command ``status`` in game console
 ```
 ``Survival``
 ```ini
-"Left4Rank"
+"SourceRank"
 {
-    "mapCount"       "40"
+    "mapCount"       "42"
 
     "mapCodes"
     {
@@ -171,6 +171,8 @@ To view userid you can use the command ``status`` in game console
         "37" "c12m5_cornfield"
         "38" "c13m3_memorialbridge"
         "39" "c13m4_cutthroatcreek"
+        "40" "c14m1_junkyard"
+        "41" "c14m2_lighthouse"
     }
 
     "mapNames"
@@ -180,7 +182,7 @@ To view userid you can use the command ``status`` in game console
         "2"  "Dark Carnival - Motel"
         "3"  "Dark Carnival - Stadium Gate"
         "4"  "Dark Carnival - Concert"
-        "5"  "Swamp Fever - Gator Village"
+        "5"  "Swamp Fever - Plank Country"
         "6"  "Swamp Fever - Shanty Town"
         "7"  "Swamp Fever - Plantation"
         "8"  "Hard Rain - Burger Tank"
@@ -215,10 +217,68 @@ To view userid you can use the command ``status`` in game console
         "37" "Blood Harvest - The Farmhouse"
         "38" "Cold Stream - Junkyard"
         "39" "Cold Stream - Waterworks"
+        "40" "The Last Stand - Junkyard"
+        "41" "The Last Stand - Lighthouse"
+    }
+}
+```
+``Scavenge``
+```ini
+"SourceRank"
+{
+    "mapCount"       "20"
+
+    "mapCodes"
+    {
+        "0"  "c1m4_atrium"
+        "1"  "c2m1_highway"
+        "2"  "c3m1_plankcountry"
+        "3"  "c4m1_milltown_a"
+        "4"  "c4m2_sugarmill_a"
+        "5"  "c4m3_sugarmill_b"
+        "6"  "c5m2_park"
+        "7"  "c6m1_riverbank"
+        "8"  "c6m2_bedlam"
+        "9"  "c6m3_port"
+        "10" "c7m1_docks"
+        "11" "c7m2_barge"
+        "12" "c8m1_apartment"
+        "13" "c8m5_rooftop"
+        "14" "c9m1_alleys"
+        "15" "c10m3_ranchhouse"
+        "16" "c11m4_terminal"
+        "17" "c12m5_cornfield"
+        "18" "c14m1_junkyard"
+        "19" "c14m2_lighthouse"
+    }
+
+    "mapNames"
+    {
+        "0"  "Dead Center - Mall Atrium"
+        "1"  "Dark Carnival - Motel"
+        "2"  "Swamp Fever - Plank Country"
+        "3"  "Hard Rain - Milltown"
+        "4"  "Hard Rain - Sugar Mill"
+        "5"  "Hard Rain - Mill Escape"
+        "6"  "The Parish - Park"
+        "7"  "The Passing - Riverbank"
+        "8"  "The Passing - Underground"
+        "9"  "The Passing - Port"
+        "10" "The Sacrifice - Docks"
+        "11" "The Sacrifice - Brick Factory"
+        "12" "No Mercy - Apartments"
+        "13" "No Mercy - The Rooftop"
+        "14" "Crash Course - The Alleys"
+        "15" "Death Toll - The Church"
+        "16" "Dead Air - The Terminal"
+        "17" "Blood Harvest - The Farmhouse"
+        "18" "The Last Stand - Junkyard"
+        "19" "The Last Stand - Lighthouse"
     }
 
 }
 ```
+
 
 ``No more room in hell``
 ```ini
