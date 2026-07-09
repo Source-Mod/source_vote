@@ -70,15 +70,15 @@ void   ReadVariables()
     PrintToServer("[SourceVote] Back to lobby protection is disabled: %b", gv_DisableBackToLobbyProtection);
 }
 
-bool gvf_Hooked_L4D2_VersusMatchFinished  = false;
-bool gvf_Hooked_L4D2_RoundEndSurvival     = false;
-bool gvf_Hooked_L4D2_VersusRematchStart   = false;
-bool gvf_Hooked_L4D2_FinaleStart          = false;
-bool gvf_Hooked_NMRIH_PlayerDeath         = false;
-bool gvf_Hooked_NMRIH_PlayerSpawn         = false;
-bool gvf_Hooked_NMRIH_ExtractionComplete  = false;
-bool gvf_Hooked_NMRIH_TokenEarned         = false;
-bool gvf_Hooked_NMRIH_MapComplete         = false;
+bool gvf_Hooked_L4D2_VersusMatchFinished = false;
+bool gvf_Hooked_L4D2_RoundEndSurvival    = false;
+bool gvf_Hooked_L4D2_VersusRematchStart  = false;
+bool gvf_Hooked_L4D2_FinaleStart         = false;
+bool gvf_Hooked_NMRIH_PlayerDeath        = false;
+bool gvf_Hooked_NMRIH_PlayerSpawn        = false;
+bool gvf_Hooked_NMRIH_ExtractionComplete = false;
+bool gvf_Hooked_NMRIH_TokenEarned        = false;
+bool gvf_Hooked_NMRIH_MapComplete        = false;
 void ReadConfigs()
 {
     // #region Default Configuration Creation
@@ -336,7 +336,7 @@ void ReadConfigs()
             if (StrEqual(gv_Gamemode, "versus"))
             {
                 PrintToServer("[SourceVote] versus detected");
-                SafeHook("versus_match_finished", RoundEndBasic, EventHookMode_Post, gvf_Hooked_L4D2_VersusMatchFinished);
+                SafeHookUserMsg("PZEndGamePanelMsg", VersusRematchStart, true, gvf_Hooked_L4D2_VersusRematchStart);
             }
             else if (StrEqual(gv_Gamemode, "mutation15")) {
                 PrintToServer("[SourceVote] survival versus detected");
@@ -851,7 +851,7 @@ public void RoundEndSurvival(Event event, const char[] name, bool dontBroadcast)
 
 public Action VersusRematchStart(UserMsg msg_id, BfRead hMsg, const int[] players, int playersNum, bool reliable, bool init)
 {
-    PrintToServer("[Source Vote] Rematch called, generating vote system");
+    PrintToServer("[SourceVote] Rematch called, generating vote system");
     RequestFrame(VersusRematchStartDeferred);
     return Plugin_Handled;
 }
@@ -1030,7 +1030,7 @@ public void InitMapVote()
                 if (StrEqual("left4dead2", gv_Game))
                 {
                     // Survival Versus create the Rematch button
-                    if ((StrEqual(gv_Gamemode, "mutation15") || StrEqual(gv_Gamemode, "scavenge") || StrEqual(gv_Gamemode, "survival")) && gv_MapCount >= MAX_VOTE_MAPS)
+                    if ((StrEqual(gv_Gamemode, "mutation15") || StrEqual(gv_Gamemode, "scavenge") || StrEqual(gv_Gamemode, "survival") || StrEqual(gv_Gamemode, "versus")) && gv_MapCount >= MAX_VOTE_MAPS)
                     {
                         if (gv_ShouldDebug)
                             PrintToServer("[SourceVote] Survival detected, trying to create rematch...");
@@ -1057,7 +1057,7 @@ public void InitMapVote()
                             char menuId[2];
                             Format(menuId, sizeof(menuId), "%d", j + 1);
 
-                            if (StrEqual(gv_Gamemode, "mutation15") || StrEqual(gv_Gamemode, "scavenge"))
+                            if (StrEqual(gv_Gamemode, "mutation15") || StrEqual(gv_Gamemode, "scavenge") || StrEqual(gv_Gamemode, "versus"))
                             {
                                 menu.AddItem(menuId, "Rematch");
                             }
@@ -1188,7 +1188,7 @@ public Action VoteFinish(Handle timer)
                 winnerIndex = GetRandomInt(0, MAX_VOTE_MAPS - 1);
             }
         }
-        if (StrEqual("nmrih", gv_Game))
+        else if (StrEqual("nmrih", gv_Game))
         {
             winnerIndex = 0;
         }
