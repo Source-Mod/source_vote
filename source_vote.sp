@@ -376,7 +376,7 @@ void ReadConfigs()
         PrintToServer("[SourceVote] vote kick protection for admins is enabled");
         AddCommandListener(Votekick_Protection, "callvote");
     }
-    if (gv_DisableBackToLobbyProtection)
+    if (gv_DisableBackToLobbyProtection == false)
     {
         PrintToServer("[SourceVote] vote back to lobby and restart campaign protection is enabled");
         AddCommandListener(Votebacktolobby_Protection, "callvote");
