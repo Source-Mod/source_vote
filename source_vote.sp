@@ -858,6 +858,12 @@ public Action VersusRematchStart(UserMsg msg_id, BfRead hMsg, const int[] player
 
 public void VersusRematchStartDeferred(any data)
 {
+    // L4D2 disables its native vote system when the round ends (rematch state).
+    // Re-enable it so the "Call Vote" button in the pause menu stays functional.
+    ConVar allowVotes = FindConVar("sv_allow_votes");
+    if (allowVotes != null)
+        allowVotes.IntValue = 1;
+
     GenerateMapVote();
     InitMapVote();
 }
