@@ -1221,7 +1221,10 @@ public Action VoteFinish(Handle timer)
         if (!StrEqual(currentMap, gv_VotedMapCode))
         {
             PrintToServer("[SourceVote] Map code is not the same, %s / %s", currentMap, gv_VotedMapCode);
-            CreateTimer(2.0, VoteChangeLevelTimer);
+            if (StrEqual(gv_Gamemode, "scavenge"))
+                CreateTimer(2.0, VoteChangeLevelScavengeTimer);
+            else
+                CreateTimer(2.0, VoteChangeLevelTimer);
         }
         else {
             PrintToServer("[SourceVote] Map code is the same, ignoring...");
@@ -1240,6 +1243,16 @@ public Action VoteChangeLevelTimer(Handle timer)
     ServerCommand("changelevel %s\n", gv_VotedMapCode);
 
     return Plugin_Stop;    // Stop the timer after execution
+}
+
+// Scavenge requires setting mp_gamemode before changelevel, otherwise gascans disappear.
+// Plain changelevel without the cvar set bugs scavenge mode.
+public Action VoteChangeLevelScavengeTimer(Handle timer)
+{
+    ServerCommand("sm_cvar mp_gamemode scavenge\n");
+    CreateTimer(0.5, VoteChangeLevelTimer);
+
+    return Plugin_Stop;
 }
 
 //
