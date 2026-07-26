@@ -3,10 +3,10 @@
 public Plugin myinfo =
 {
     name        = "Source Vote",
-    author      = "LeandroTheDev",
+    author      = "LeansBoboDev",
     description = "Player vote system",
     version     = "1.8",
-    url         = "https://github.com/LeandroTheDev/source_vote"
+    url         = "https://github.com/LeansBoboDev/source_vote"
 };
 
 bool   gv_NMRIH_IsDeadPlayer[MAXPLAYERS];
@@ -70,15 +70,17 @@ void   ReadVariables()
     PrintToServer("[SourceVote] Back to lobby protection is disabled: %b", gv_DisableBackToLobbyProtection);
 }
 
-bool gvf_Hooked_L4D2_VersusMatchFinished = false;
-bool gvf_Hooked_L4D2_RoundEndSurvival    = false;
-bool gvf_Hooked_L4D2_VersusRematchStart  = false;
-bool gvf_Hooked_L4D2_FinaleStart         = false;
-bool gvf_Hooked_NMRIH_PlayerDeath        = false;
-bool gvf_Hooked_NMRIH_PlayerSpawn        = false;
-bool gvf_Hooked_NMRIH_ExtractionComplete = false;
-bool gvf_Hooked_NMRIH_TokenEarned        = false;
-bool gvf_Hooked_NMRIH_MapComplete        = false;
+bool gvf_Hooked_L4D2_VersusMatchFinished   = false;
+bool gvf_Hooked_L4D2_RoundEndSurvival      = false;
+bool gvf_Hooked_L4D2_VersusRematchStart    = false;
+bool gvf_Hooked_L4D2_FinaleStart           = false;
+bool gvf_Hooked_L4D2_SurvivalVersusRoundEnd = false;
+bool gvf_Hooked_NMRIH_PlayerDeath          = false;
+bool gvf_Hooked_NMRIH_PlayerSpawn          = false;
+bool gvf_Hooked_NMRIH_ExtractionComplete   = false;
+bool gvf_Hooked_NMRIH_TokenEarned          = false;
+bool gvf_Hooked_NMRIH_MapComplete          = false;
+int  gv_SurvivalVersus_RoundCount          = 0;
 void ReadConfigs()
 {
     // #region Default Configuration Creation
@@ -323,6 +325,7 @@ void ReadConfigs()
     {
         SafeUnhook("versus_match_finished", RoundEndBasic, EventHookMode_Post, gvf_Hooked_L4D2_VersusMatchFinished);
         SafeUnhook("round_end", RoundEndSurvival, EventHookMode_Post, gvf_Hooked_L4D2_RoundEndSurvival);
+        SafeUnhook("round_end", RoundEndSurvivalVersus, EventHookMode_Post, gvf_Hooked_L4D2_SurvivalVersusRoundEnd);
         SafeUnhook("finale_start", RoundEndBasic, EventHookMode_Post, gvf_Hooked_L4D2_FinaleStart);
         SafeUnhook("player_death", OnPlayerDeath, EventHookMode_Post, gvf_Hooked_NMRIH_PlayerDeath);
         SafeUnhook("player_spawn", OnPlayerSpawn, EventHookMode_Post, gvf_Hooked_NMRIH_PlayerSpawn);
@@ -340,7 +343,7 @@ void ReadConfigs()
             }
             else if (StrEqual(gv_Gamemode, "mutation15")) {
                 PrintToServer("[SourceVote] survival versus detected");
-                SafeHookUserMsg("PZEndGamePanelMsg", VersusRematchStart, true, gvf_Hooked_L4D2_VersusRematchStart);
+                SafeHook("round_end", RoundEndSurvivalVersus, EventHookMode_Post, gvf_Hooked_L4D2_SurvivalVersusRoundEnd);
             }
             else if (StrEqual(gv_Gamemode, "scavenge")) {
                 PrintToServer("[SourceVote] scavenge detected");
@@ -851,21 +854,31 @@ public void RoundEndSurvival(Event event, const char[] name, bool dontBroadcast)
 
 public Action VersusRematchStart(UserMsg msg_id, BfRead hMsg, const int[] players, int playersNum, bool reliable, bool init)
 {
-    PrintToServer("[SourceVote] Rematch called, generating vote system");
-    RequestFrame(VersusRematchStartDeferred);
     return Plugin_Handled;
 }
 
-public void VersusRematchStartDeferred(any data)
+public void RoundEndSurvivalVersus(Event event, const char[] name, bool dontBroadcast)
 {
-    // L4D2 disables its native vote system when the round ends (rematch state).
-    // Re-enable it so the "Call Vote" button in the pause menu stays functional.
-    ConVar allowVotes = FindConVar("sv_allow_votes");
-    if (allowVotes != null)
-        allowVotes.IntValue = 1;
+    int reason = event.GetInt("reason");
 
-    GenerateMapVote();
-    InitMapVote();
+    // Restart from hibernation
+    if (reason == 8) return;
+
+    // Scenario Restart
+    if (reason == 0) return;
+
+    // Chapter ended
+    if (reason == 6) return;
+
+    gv_SurvivalVersus_RoundCount++;
+    PrintToServer("[SourceVote] SurvivalVersus round ended, count: %d", gv_SurvivalVersus_RoundCount);
+
+    if (gv_SurvivalVersus_RoundCount % 2 == 0)
+    {
+        PrintToServer("[SourceVote] SurvivalVersus generating map vote");
+        GenerateMapVote();
+        InitMapVote();
+    }
 }
 // #endregion Left 4 Dead 2
 
