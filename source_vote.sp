@@ -1,11 +1,12 @@
 #include <sourcemod>
+#include <nextmap>
 
 public Plugin myinfo =
 {
     name        = "Source Vote",
     author      = "LeansBoboDev",
     description = "Player vote system",
-    version     = "1.8",
+    version     = "1.9",
     url         = "https://github.com/LeansBoboDev/source_vote"
 };
 
@@ -13,6 +14,7 @@ bool   gv_NMRIH_IsDeadPlayer[MAXPLAYERS];
 int    gv_NMRIH_PlayerTokens[MAXPLAYERS];
 
 int    gv_BanTargetMap[MAXPLAYERS];
+int    gv_KickTargetMap[MAXPLAYERS];
 bool   gv_ShouldDebug = false;
 int    gv_MapCount    = 0;
 char   gv_MapCodes[99][64];
@@ -23,6 +25,7 @@ int    gv_SecondsToVote                  = 10;
 bool   gv_DisableMapVote                 = false;
 bool   gv_DisableAdminVoteKickProtection = false;
 bool   gv_DisableBackToLobbyProtection   = false;
+float  gv_TfExtendMinutes                = 10.0;
 
 char   gv_Gamemode[64];
 char   gv_Game[64];
@@ -34,6 +37,7 @@ ConVar g_SecondsToVote;
 ConVar g_DisableMapVote;
 ConVar g_DisableAdminVoteKickProtection;
 ConVar g_DisableBackToLobbyProtection;
+ConVar g_TfExtendMinutes;
 
 void   ReadVariables()
 {
@@ -51,13 +55,13 @@ void   ReadVariables()
 
     GetGameFolderName(gv_Game, sizeof(gv_Game));
 
-    if (StrEqual(gv_Game, "nmrih", false))
+    if (StrEqual(gv_Game, "left4dead2"))
     {
-        gv_Gamemode = "Unsuported"
-    }
-    else {
         GetConVarString(FindConVar("mp_gamemode"), gv_Gamemode, sizeof(gv_Gamemode));
         PrintToServer("[SourceVote] Loaded gv_Gamemode: %s", gv_Gamemode);
+    }
+    else {
+        gv_Gamemode = "Unsuported"
     }
 
     gv_DisableMapVote = g_DisableMapVote.BoolValue;
@@ -68,6 +72,9 @@ void   ReadVariables()
 
     gv_DisableBackToLobbyProtection = g_DisableBackToLobbyProtection.BoolValue;
     PrintToServer("[SourceVote] Back to lobby protection is disabled: %b", gv_DisableBackToLobbyProtection);
+
+    gv_TfExtendMinutes = g_TfExtendMinutes.FloatValue;
+    PrintToServer("[SourceVote] TF2 map extend minutes: %f", gv_TfExtendMinutes);
 }
 
 bool gvf_Hooked_L4D2_VersusMatchFinished   = false;
@@ -80,7 +87,9 @@ bool gvf_Hooked_NMRIH_PlayerSpawn          = false;
 bool gvf_Hooked_NMRIH_ExtractionComplete   = false;
 bool gvf_Hooked_NMRIH_TokenEarned          = false;
 bool gvf_Hooked_NMRIH_MapComplete          = false;
+bool gvf_Hooked_TF_MapTimeRemaining        = false;
 int  gv_SurvivalVersus_RoundCount          = 0;
+bool gv_TF_VoteTriggered                  = false;
 void ReadConfigs()
 {
     // #region Default Configuration Creation
@@ -265,6 +274,176 @@ void ReadConfigs()
                 WriteFileLine(file, "");
                 WriteFileLine(file, "}");
             }
+            else if (StrEqual(gv_Game, "tf2classified")) {
+                WriteFileLine(file, "\"SourceVote\"");
+                WriteFileLine(file, "{");
+
+                WriteFileLine(file, "    \"mapCount\"       \"76\"");
+                WriteFileLine(file, "");
+
+                WriteFileLine(file, "    \"mapCodes\"");
+                WriteFileLine(file, "    {");
+                WriteFileLine(file, "        \"0\"  \"4arena_flask\"");
+                WriteFileLine(file, "        \"1\"  \"4arena_floodgate\"");
+                WriteFileLine(file, "        \"2\"  \"4dom_hydro\"");
+                WriteFileLine(file, "        \"3\"  \"4dom_krepost\"");
+                WriteFileLine(file, "        \"4\"  \"4koth_frigid\"");
+                WriteFileLine(file, "        \"5\"  \"4plr_sisyphus\"");
+                WriteFileLine(file, "        \"6\"  \"arena_badlands\"");
+                WriteFileLine(file, "        \"7\"  \"arena_granary\"");
+                WriteFileLine(file, "        \"8\"  \"arena_lumberyard\"");
+                WriteFileLine(file, "        \"9\"  \"arena_nucleus\"");
+                WriteFileLine(file, "        \"10\"  \"arena_offblast_final\"");
+                WriteFileLine(file, "        \"11\"  \"arena_ravine\"");
+                WriteFileLine(file, "        \"12\"  \"arena_sawmill\"");
+                WriteFileLine(file, "        \"13\"  \"arena_watchtower\"");
+                WriteFileLine(file, "        \"14\"  \"cp_5gorge\"");
+                WriteFileLine(file, "        \"15\"  \"cp_amaranth\"");
+                WriteFileLine(file, "        \"16\"  \"cp_badlands\"");
+                WriteFileLine(file, "        \"17\"  \"cp_coldfront\"");
+                WriteFileLine(file, "        \"18\"  \"cp_degrootkeep\"");
+                WriteFileLine(file, "        \"19\"  \"cp_dustbowl\"");
+                WriteFileLine(file, "        \"20\"  \"cp_egypt_final\"");
+                WriteFileLine(file, "        \"21\"  \"cp_fastlane\"");
+                WriteFileLine(file, "        \"22\"  \"cp_foundry\"");
+                WriteFileLine(file, "        \"23\"  \"cp_freight_final1\"");
+                WriteFileLine(file, "        \"24\"  \"cp_furnace_rc\"");
+                WriteFileLine(file, "        \"25\"  \"cp_gorge\"");
+                WriteFileLine(file, "        \"26\"  \"cp_granary\"");
+                WriteFileLine(file, "        \"27\"  \"cp_gravelpit\"");
+                WriteFileLine(file, "        \"28\"  \"cp_gullywash\"");
+                WriteFileLine(file, "        \"29\"  \"cp_junction_final\"");
+                WriteFileLine(file, "        \"30\"  \"cp_mountainlab\"");
+                WriteFileLine(file, "        \"31\"  \"cp_powerhouse\"");
+                WriteFileLine(file, "        \"32\"  \"cp_steel\"");
+                WriteFileLine(file, "        \"33\"  \"cp_tidal_v4\"");
+                WriteFileLine(file, "        \"34\"  \"cp_well\"");
+                WriteFileLine(file, "        \"35\"  \"cp_yukon_final\"");
+                WriteFileLine(file, "        \"36\"  \"ctf_2fort\"");
+                WriteFileLine(file, "        \"37\"  \"ctf_doublecross\"");
+                WriteFileLine(file, "        \"38\"  \"ctf_landfall\"");
+                WriteFileLine(file, "        \"39\"  \"ctf_pelican_peak\"");
+                WriteFileLine(file, "        \"40\"  \"ctf_sawmill\"");
+                WriteFileLine(file, "        \"41\"  \"ctf_turbine\"");
+                WriteFileLine(file, "        \"42\"  \"ctf_well\"");
+                WriteFileLine(file, "        \"43\"  \"dom_oilcanyon\"");
+                WriteFileLine(file, "        \"44\"  \"dom_railway\"");
+                WriteFileLine(file, "        \"45\"  \"dom_sawtooth\"");
+                WriteFileLine(file, "        \"46\"  \"itemtest\"");
+                WriteFileLine(file, "        \"47\"  \"itemtest_4team\"");
+                WriteFileLine(file, "        \"48\"  \"koth_badlands\"");
+                WriteFileLine(file, "        \"49\"  \"koth_harvest_event\"");
+                WriteFileLine(file, "        \"50\"  \"koth_harvest_final\"");
+                WriteFileLine(file, "        \"51\"  \"koth_lakeside_final\"");
+                WriteFileLine(file, "        \"52\"  \"koth_nucleus\"");
+                WriteFileLine(file, "        \"53\"  \"koth_sawmill\"");
+                WriteFileLine(file, "        \"54\"  \"koth_viaduct\"");
+                WriteFileLine(file, "        \"55\"  \"pl_badwater\"");
+                WriteFileLine(file, "        \"56\"  \"pl_barnblitz\"");
+                WriteFileLine(file, "        \"57\"  \"pl_frontier_final\"");
+                WriteFileLine(file, "        \"58\"  \"pl_goldrush\"");
+                WriteFileLine(file, "        \"59\"  \"pl_hoodoo_final\"");
+                WriteFileLine(file, "        \"60\"  \"pl_jinn\"");
+                WriteFileLine(file, "        \"61\"  \"pl_thundermountain\"");
+                WriteFileLine(file, "        \"62\"  \"plr_hightower\"");
+                WriteFileLine(file, "        \"63\"  \"plr_nightfall_final\"");
+                WriteFileLine(file, "        \"64\"  \"plr_pipeline\"");
+                WriteFileLine(file, "        \"65\"  \"tc_hydro\"");
+                WriteFileLine(file, "        \"66\"  \"td_caper\"");
+                WriteFileLine(file, "        \"67\"  \"td_sunnyside\"");
+                WriteFileLine(file, "        \"68\"  \"vip_avanti\"");
+                WriteFileLine(file, "        \"69\"  \"vip_badwater\"");
+                WriteFileLine(file, "        \"70\"  \"vip_harbor\"");
+                WriteFileLine(file, "        \"71\"  \"vip_mineside\"");
+                WriteFileLine(file, "        \"72\"  \"vip_trainyard\"");
+                WriteFileLine(file, "        \"73\"  \"vipr_2bridge\"");
+                WriteFileLine(file, "        \"74\"  \"vipr_chopper\"");
+                WriteFileLine(file, "        \"75\"  \"vipr_drizzle\"");
+                WriteFileLine(file, "    }");
+                WriteFileLine(file, "");
+
+                WriteFileLine(file, "    \"mapNames\"");
+                WriteFileLine(file, "    {");
+                WriteFileLine(file, "        \"0\"  \"Flask\"");
+                WriteFileLine(file, "        \"1\"  \"Floodgate\"");
+                WriteFileLine(file, "        \"2\"  \"Hydro (Domination)\"");
+                WriteFileLine(file, "        \"3\"  \"Krepost (Domination)\"");
+                WriteFileLine(file, "        \"4\"  \"Frigid (KOTH)\"");
+                WriteFileLine(file, "        \"5\"  \"Sisyphus (Payload Race)\"");
+                WriteFileLine(file, "        \"6\"  \"Badlands (Arena)\"");
+                WriteFileLine(file, "        \"7\"  \"Granary (Arena)\"");
+                WriteFileLine(file, "        \"8\"  \"Lumberyard (Arena)\"");
+                WriteFileLine(file, "        \"9\"  \"Nucleus (Arena)\"");
+                WriteFileLine(file, "        \"10\"  \"Offblast (Arena)\"");
+                WriteFileLine(file, "        \"11\"  \"Ravine (Arena)\"");
+                WriteFileLine(file, "        \"12\"  \"Sawmill (Arena)\"");
+                WriteFileLine(file, "        \"13\"  \"Watchtower (Arena)\"");
+                WriteFileLine(file, "        \"14\"  \"5Gorge\"");
+                WriteFileLine(file, "        \"15\"  \"Amaranth\"");
+                WriteFileLine(file, "        \"16\"  \"Badlands\"");
+                WriteFileLine(file, "        \"17\"  \"Coldfront\"");
+                WriteFileLine(file, "        \"18\"  \"Degroot Keep\"");
+                WriteFileLine(file, "        \"19\"  \"Dustbowl\"");
+                WriteFileLine(file, "        \"20\"  \"Egypt\"");
+                WriteFileLine(file, "        \"21\"  \"Fastlane\"");
+                WriteFileLine(file, "        \"22\"  \"Foundry\"");
+                WriteFileLine(file, "        \"23\"  \"Freight\"");
+                WriteFileLine(file, "        \"24\"  \"Furnace Creek\"");
+                WriteFileLine(file, "        \"25\"  \"Gorge\"");
+                WriteFileLine(file, "        \"26\"  \"Granary\"");
+                WriteFileLine(file, "        \"27\"  \"Gravel Pit\"");
+                WriteFileLine(file, "        \"28\"  \"Gullywash\"");
+                WriteFileLine(file, "        \"29\"  \"Junction\"");
+                WriteFileLine(file, "        \"30\"  \"Mountain Lab\"");
+                WriteFileLine(file, "        \"31\"  \"Powerhouse\"");
+                WriteFileLine(file, "        \"32\"  \"Steel\"");
+                WriteFileLine(file, "        \"33\"  \"Tidal\"");
+                WriteFileLine(file, "        \"34\"  \"Well\"");
+                WriteFileLine(file, "        \"35\"  \"Yukon\"");
+                WriteFileLine(file, "        \"36\"  \"2Fort\"");
+                WriteFileLine(file, "        \"37\"  \"Double Cross\"");
+                WriteFileLine(file, "        \"38\"  \"Landfall\"");
+                WriteFileLine(file, "        \"39\"  \"Pelican Peak\"");
+                WriteFileLine(file, "        \"40\"  \"Sawmill (CTF)\"");
+                WriteFileLine(file, "        \"41\"  \"Turbine\"");
+                WriteFileLine(file, "        \"42\"  \"Well (CTF)\"");
+                WriteFileLine(file, "        \"43\"  \"Oil Canyon\"");
+                WriteFileLine(file, "        \"44\"  \"Railway\"");
+                WriteFileLine(file, "        \"45\"  \"Sawtooth\"");
+                WriteFileLine(file, "        \"46\"  \"Item Test\"");
+                WriteFileLine(file, "        \"47\"  \"Item Test (4 Team)\"");
+                WriteFileLine(file, "        \"48\"  \"Badlands (KOTH)\"");
+                WriteFileLine(file, "        \"49\"  \"Harvest (Halloween)\"");
+                WriteFileLine(file, "        \"50\"  \"Harvest\"");
+                WriteFileLine(file, "        \"51\"  \"Lakeside\"");
+                WriteFileLine(file, "        \"52\"  \"Nucleus (KOTH)\"");
+                WriteFileLine(file, "        \"53\"  \"Sawmill (KOTH)\"");
+                WriteFileLine(file, "        \"54\"  \"Viaduct\"");
+                WriteFileLine(file, "        \"55\"  \"Badwater Basin\"");
+                WriteFileLine(file, "        \"56\"  \"Barnblitz\"");
+                WriteFileLine(file, "        \"57\"  \"Frontier\"");
+                WriteFileLine(file, "        \"58\"  \"Gold Rush\"");
+                WriteFileLine(file, "        \"59\"  \"Hoodoo\"");
+                WriteFileLine(file, "        \"60\"  \"Jinn\"");
+                WriteFileLine(file, "        \"61\"  \"Thunder Mountain\"");
+                WriteFileLine(file, "        \"62\"  \"Hightower\"");
+                WriteFileLine(file, "        \"63\"  \"Nightfall\"");
+                WriteFileLine(file, "        \"64\"  \"Pipeline\"");
+                WriteFileLine(file, "        \"65\"  \"Hydro (Territorial Control)\"");
+                WriteFileLine(file, "        \"66\"  \"Caper (Training)\"");
+                WriteFileLine(file, "        \"67\"  \"Sunnyside (Training)\"");
+                WriteFileLine(file, "        \"68\"  \"Avanti (VIP)\"");
+                WriteFileLine(file, "        \"69\"  \"Badwater (VIP)\"");
+                WriteFileLine(file, "        \"70\"  \"Harbor (VIP)\"");
+                WriteFileLine(file, "        \"71\"  \"Mineside (VIP)\"");
+                WriteFileLine(file, "        \"72\"  \"Trainyard (VIP)\"");
+                WriteFileLine(file, "        \"73\"  \"2Bridge (VIP Raid)\"");
+                WriteFileLine(file, "        \"74\"  \"Chopper (VIP Raid)\"");
+                WriteFileLine(file, "        \"75\"  \"Drizzle (VIP Raid)\"");
+                WriteFileLine(file, "    }");
+                WriteFileLine(file, "");
+                WriteFileLine(file, "}");
+            }
             CloseHandle(file);
             PrintToServer("[SourceVote] Configuration file created: %s", gv_VotePath);
         }
@@ -332,6 +511,7 @@ void ReadConfigs()
         SafeUnhook("extraction_complete", RoundEndBasic, EventHookMode_Post, gvf_Hooked_NMRIH_ExtractionComplete);
         SafeUnhook("token_earned", OnPlayerReceiveToken, EventHookMode_Post, gvf_Hooked_NMRIH_TokenEarned);
         SafeUnhook("map_complete", FunctionTest, EventHookMode_Post, gvf_Hooked_NMRIH_MapComplete);
+        SafeUnhook("tf_map_time_remaining", OnTfMapTimeRemaining, EventHookMode_Post, gvf_Hooked_TF_MapTimeRemaining);
         SafeUnhookUserMsg("PZEndGamePanelMsg", VersusRematchStart, true, gvf_Hooked_L4D2_VersusRematchStart);
 
         if (StrEqual(gv_Game, "left4dead2"))
@@ -367,8 +547,9 @@ void ReadConfigs()
             SafeHook("token_earned", OnPlayerReceiveToken, EventHookMode_Post, gvf_Hooked_NMRIH_TokenEarned);
             SafeHook("map_complete", FunctionTest, EventHookMode_Post, gvf_Hooked_NMRIH_MapComplete);
         }
-        else if (StrEqual(gv_Game, "tf")) {
-            // teamplay_game_over ???
+        else if (IsTF2Game()) {
+            gv_TF_VoteTriggered = false;
+            SafeHook("tf_map_time_remaining", OnTfMapTimeRemaining, EventHookMode_Post, gvf_Hooked_TF_MapTimeRemaining);
         }
     }
     // #endregion Map Vote
@@ -510,6 +691,17 @@ public void OnPluginStart()
         1.0      // max value
     );
 
+    g_TfExtendMinutes = CreateConVar(
+        "sourceVoteTfExtendMinutes",
+        "10",    // default value
+        "Minutes added to mp_timelimit when TF2 players vote to keep the current map",
+        FCVAR_NONE,
+        true,    // has min
+        0.0,     // min value
+        false,   // has max
+        0.0      // max value
+    );
+
     AddCommandListener(Vote_Print, "callvote");
 
     ReadVariables();
@@ -517,6 +709,7 @@ public void OnPluginStart()
 
     RegConsoleCmd("startvote", CommandStartVote, "Start voting system");
     RegConsoleCmd("startban", CommandBan, "Ban someone");
+    RegConsoleCmd("startkick", CommandKick, "Kick someone");
     RegConsoleCmd("sourcevotereload", CommandSourceVoteReload, "Reload Cvars and Configs");
 
     PrintToServer("[SourceVote] initialized");
@@ -819,6 +1012,142 @@ void ExecuteBan(int client, int bannedClient, const char[] reason)
     PrintToChat(client, "[SourceVote] Player permantly banned. Reason: %s", reason);
 }
 // #endregion Ban
+
+// #region Kick
+public Action CommandKick(int client, int args)
+{
+    if (client != 0 && !IsValidClient(client)) return Plugin_Stop;
+    if (client != 0 && !(CheckCommandAccess(client, "sm_startkick", ADMFLAG_KICK)))
+    {
+        PrintToChat(client, "[ERROR] Only admins can use this command.");
+        return Plugin_Stop;
+    }
+
+    // No arguments open the menu
+    if (args == 0)
+    {
+        ShowPlayerSelectMenuKick(client);
+        return Plugin_Handled;
+    }
+
+    int kickedClient = GetCmdArgInt(1);
+    if (kickedClient == 0)
+    {
+        PrintToChat(client, "[SourceVote] startkick usage: startkick <userid> <reason>");
+        return Plugin_Stop;
+    }
+
+    if (!IsValidClient(kickedClient))
+    {
+        PrintToChat(client, "[SourceVote] Client is invalid.");
+        return Plugin_Stop;
+    }
+
+    char reason[128];
+    GetCmdArg(2, reason, sizeof(reason));
+    if (StrEqual(reason, ""))
+    {
+        strcopy(reason, sizeof(reason), "Unknown");
+    }
+
+    ExecuteKick(client, kickedClient, reason);
+    return Plugin_Handled;
+}
+
+void ShowPlayerSelectMenuKick(int client)
+{
+    Menu menu = new Menu(MenuHandler_PlayerSelectKick);
+    menu.SetTitle("Select player to kick:");
+
+    for (int i = 1; i <= MaxClients; i++)
+    {
+        if (!IsClientInGame(i) || IsFakeClient(i) || i == client)
+            continue;
+
+        char name[MAX_NAME_LENGTH];
+        char userId[16];
+        GetClientName(i, name, sizeof(name));
+        IntToString(GetClientUserId(i), userId, sizeof(userId));
+
+        menu.AddItem(userId, name);
+    }
+
+    if (menu.ItemCount == 0)
+    {
+        PrintToChat(client, "[SourceVote] No avaible players to kick.");
+        delete menu;
+        return;
+    }
+
+    menu.ExitButton = true;
+    menu.Display(client, MENU_TIME_FOREVER);
+}
+
+void MenuHandler_PlayerSelectKick(Menu menu, MenuAction action, int client, int param2)
+{
+    if (action == MenuAction_Select)
+    {
+        char userId[16];
+        menu.GetItem(param2, userId, sizeof(userId));
+
+        int kickedClient = GetClientOfUserId(StringToInt(userId));
+        if (kickedClient == 0 || !IsValidClient(kickedClient))
+        {
+            PrintToChat(client, "[SourceVote] Player not found.");
+        }
+
+        gv_KickTargetMap[client] = kickedClient;
+        ShowReasonMenuKick(client);
+    }
+    else if (action == MenuAction_End)
+    {
+        delete menu;
+    }
+}
+
+void ShowReasonMenuKick(int client)
+{
+    Menu menu = new Menu(MenuHandler_ReasonSelectKick);
+    menu.SetTitle("Kick Reason:");
+
+    menu.AddItem("Cheating", "Cheating / Hacks");
+    menu.AddItem("Griefing", "Griefing / Trolling");
+    menu.AddItem("Harassment", "Harassment / Spam");
+    menu.AddItem("Exploiting", "Exploiting / Bug Abuse");
+    menu.AddItem("Unkown", "Unkown");
+
+    menu.ExitButton = true;
+    menu.Display(client, MENU_TIME_FOREVER);
+}
+
+void MenuHandler_ReasonSelectKick(Menu menu, MenuAction action, int client, int param2)
+{
+    if (action == MenuAction_Select)
+    {
+        char reason[128];
+        menu.GetItem(param2, reason, sizeof(reason));
+
+        int kickedClient = gv_KickTargetMap[client];
+        if (!IsValidClient(kickedClient))
+        {
+            PrintToChat(client, "[SourceVote] Invalid player.");
+        }
+
+        gv_KickTargetMap[client] = 0;
+        ExecuteKick(client, kickedClient, reason);
+    }
+    else if (action == MenuAction_End)
+    {
+        delete menu;
+    }
+}
+
+void ExecuteKick(int client, int kickedClient, const char[] reason)
+{
+    KickClient(kickedClient, "You have been kicked. Reason: %s", reason);
+    PrintToChat(client, "[SourceVote] Player kicked. Reason: %s", reason);
+}
+// #endregion Kick
 //
 // #endregion Commands
 //
@@ -965,6 +1294,30 @@ public void FunctionTest(Event event, const char[] name, bool dontBroadcast)
 // #endregion No More Room in Hell
 //
 
+// #region Team Fortress 2
+public void OnTfMapTimeRemaining(Event event, const char[] name, bool dontBroadcast)
+{
+    int seconds = event.GetInt("seconds");
+
+    // Time was pushed back (map extended / new map loaded), allow the vote to trigger again
+    if (seconds >= 60)
+    {
+        gv_TF_VoteTriggered = false;
+        return;
+    }
+
+    if (gv_TF_VoteTriggered)
+        return;
+
+    gv_TF_VoteTriggered = true;
+
+    PrintToServer("[SourceVote] TF2 map time remaining: %d, starting vote", seconds);
+
+    GenerateMapVote();
+    InitMapVote();
+}
+// #endregion Team Fortress 2
+
 #define MAX_VOTE_MAPS 8
 int  gv_AvailableMapIndexesVotes[MAX_VOTE_MAPS];
 int  gv_Votes[MAX_VOTE_MAPS];
@@ -1097,7 +1450,7 @@ public void InitMapVote()
                         }
                     }
                 }
-                else if (StrEqual("nmrih", gv_Game)) {
+                else if (StrEqual("nmrih", gv_Game) || IsTF2Game()) {
                     if (gv_ShouldDebug)
                         PrintToServer("[SourceVote] trying to create rematch...");
 
@@ -1207,7 +1560,7 @@ public Action VoteFinish(Handle timer)
                 winnerIndex = GetRandomInt(0, MAX_VOTE_MAPS - 1);
             }
         }
-        else if (StrEqual("nmrih", gv_Game))
+        else if (StrEqual("nmrih", gv_Game) || IsTF2Game())
         {
             winnerIndex = 0;
         }
@@ -1247,6 +1600,25 @@ public Action VoteFinish(Handle timer)
         }
         else {
             PrintToServer("[SourceVote] Map code is the same, ignoring...");
+        }
+    }
+    else if (IsTF2Game())
+    {
+        char currentMap[64];
+        GetCurrentMap(currentMap, sizeof(currentMap));
+
+        if (StrEqual(currentMap, gv_VotedMapCode))
+        {
+            ConVar timelimit = FindConVar("mp_timelimit");
+            float  newLimit  = timelimit.FloatValue + gv_TfExtendMinutes;
+            timelimit.SetFloat(newLimit);
+
+            PrintToServer("[SourceVote] TF2 map kept, extended mp_timelimit to: %f", newLimit);
+            PrintToChatAll("[SourceVote] Map extended by %.0f minutes.", gv_TfExtendMinutes);
+        }
+        else {
+            SetNextMap(gv_VotedMapCode);
+            PrintToServer("[SourceVote] TF2 next map set to: %s", gv_VotedMapCode);
         }
     }
     else {
@@ -1306,6 +1678,11 @@ stock bool IsValidClient(client)
         return false;
     }
     return IsClientInGame(client);
+}
+
+stock bool IsTF2Game()
+{
+    return StrEqual(gv_Game, "tf") || StrEqual(gv_Game, "tf2classified");
 }
 //
 // #endregion
