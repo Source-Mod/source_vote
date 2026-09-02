@@ -13,6 +13,7 @@ public Plugin myinfo =
 bool   gv_NMRIH_IsDeadPlayer[MAXPLAYERS];
 int    gv_NMRIH_PlayerTokens[MAXPLAYERS];
 bool   gv_NMRIH_IsPracticing = true;
+Handle gv_VoteTimer          = null;
 
 int    gv_BanTargetMap[MAXPLAYERS];
 int    gv_KickTargetMap[MAXPLAYERS];
@@ -93,7 +94,7 @@ bool gvf_Hooked_NMRIH_PlayerSpawn          = false;
 bool gvf_Hooked_NMRIH_ExtractionComplete   = false;
 bool gvf_Hooked_NMRIH_TokenEarned          = false;
 bool gvf_Hooked_NMRIH_MapComplete          = false;
-bool gvf_Hooked_NMRIH_PracticeEnding       = false;
+bool gvf_Hooked_NMRIH_RoundBegin        = false;
 bool gvf_Hooked_TF_MapTimeRemaining        = false;
 int  gv_SurvivalVersus_RoundCount          = 0;
 bool gv_TF_VoteTriggered                  = false;
@@ -518,7 +519,7 @@ void ReadConfigs()
         SafeUnhook("extraction_complete", RoundEndBasic, EventHookMode_Post, gvf_Hooked_NMRIH_ExtractionComplete);
         SafeUnhook("token_earned", OnPlayerReceiveToken, EventHookMode_Post, gvf_Hooked_NMRIH_TokenEarned);
         SafeUnhook("map_complete", FunctionTest, EventHookMode_Post, gvf_Hooked_NMRIH_MapComplete);
-        SafeUnhook("nmrih_practice_ending", OnPracticeEnding, EventHookMode_Post, gvf_Hooked_NMRIH_PracticeEnding);
+        SafeUnhook("nmrih_round_begin", OnRoundBegin, EventHookMode_Post, gvf_Hooked_NMRIH_RoundBegin);
         SafeUnhook("tf_map_time_remaining", OnTfMapTimeRemaining, EventHookMode_Post, gvf_Hooked_TF_MapTimeRemaining);
         SafeUnhookUserMsg("PZEndGamePanelMsg", VersusRematchStart, true, gvf_Hooked_L4D2_VersusRematchStart);
 
@@ -554,7 +555,7 @@ void ReadConfigs()
             SafeHook("extraction_complete", RoundEndBasic, EventHookMode_Post, gvf_Hooked_NMRIH_ExtractionComplete);
             SafeHook("token_earned", OnPlayerReceiveToken, EventHookMode_Post, gvf_Hooked_NMRIH_TokenEarned);
             SafeHook("map_complete", FunctionTest, EventHookMode_Post, gvf_Hooked_NMRIH_MapComplete);
-            SafeHook("nmrih_practice_ending", OnPracticeEnding, EventHookMode_Post, gvf_Hooked_NMRIH_PracticeEnding);
+            SafeHook("nmrih_round_begin", OnRoundBegin, EventHookMode_Post, gvf_Hooked_NMRIH_RoundBegin);
         }
         else if (IsTF2Game()) {
             gv_TF_VoteTriggered = false;
@@ -760,8 +761,7 @@ public void OnShowPluginMessagesQueried(QueryCookie cookie, int client, ConVarQu
 
     if (StringToInt(cvarValue) == 0)
     {
-        PrintToConsole(client, "[SourceVote] Your 'cl_showpluginmessages' is disabled, you won't see vote messages in chat. Type 'cl_showpluginmessages 1' in your console to enable them.");
-        PrintHintText(client, "[SourceVote] Your 'cl_showpluginmessages' is disabled, you won't see vote messages.\nType 'cl_showpluginmessages 1' in console to enable them.");
+        PrintToChat(client, "[SourceVote] Your 'cl_showpluginmessages' is disabled, you won't see vote messages in chat. Type 'cl_showpluginmessages 1' in your console to enable them.");
     }
 }
 
@@ -771,6 +771,14 @@ public OnServerEnterHibernation()
     {
         gv_NMRIH_IsDeadPlayer[i] = false;
     }
+
+    if (gv_VoteTimer != null)
+    {
+        KillTimer(gv_VoteTimer);
+        gv_VoteTimer = null;
+    }
+
+    gv_NMRIH_IsPracticing = true;
 }
 
 public Action Vote_Print(int client, const char[] command, int argc)
@@ -1302,7 +1310,10 @@ public void OnPlayerDeath(Event event, const char[] name, bool dontBroadcast)
     }
 
     if (gv_NMRIH_IsPracticing)
+    {
         PrintToServer("[SourceVote-OnPlayerDeath] map vote ignored, is practicing");
+        return;
+    }
 
     GenerateMapVote();
     InitMapVote();
@@ -1338,11 +1349,11 @@ public void OnClientDisconnect(int client)
     gv_NMRIH_IsDeadPlayer[client] = false;
 }
 
-public void OnPracticeEnding(Event event, const char[] name, bool dontBroadcast)
+public void OnRoundBegin(Event event, const char[] name, bool dontBroadcast)
 {
     gv_NMRIH_IsPracticing = false;
     if (gv_ShouldDebug)
-        PrintToServer("[SourceVote-OnPracticeEnding] Practice ended, map vote re-enabled");
+        PrintToServer("[SourceVote-OnRoundBegin] Survival started, map vote enabled");
 }
 
 public void FunctionTest(Event event, const char[] name, bool dontBroadcast)
@@ -1567,7 +1578,7 @@ public void InitMapVote()
         PrintToServer("[SourceVote] Menu generated for: %d", client);
     }
 
-    CreateTimer(float(gv_SecondsToVote + 1), VoteFinish, 0, TIMER_FLAG_NO_MAPCHANGE);
+    gv_VoteTimer = CreateTimer(float(gv_SecondsToVote + 1), VoteFinish, 0, TIMER_FLAG_NO_MAPCHANGE);
 }
 
 public int VoteMenuHandler(Menu menu, MenuAction action, int client, int param)
@@ -1592,6 +1603,8 @@ public int VoteMenuHandler(Menu menu, MenuAction action, int client, int param)
 
 public Action VoteFinish(Handle timer)
 {
+    gv_VoteTimer = null;
+
     int maxVotes    = 0;
     int winnerIndex = -1;
 
