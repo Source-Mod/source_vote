@@ -27,6 +27,7 @@ bool   gv_DisableMapVote                 = false;
 bool   gv_DisableAdminVoteKickProtection = false;
 bool   gv_DisableBackToLobbyProtection   = false;
 float  gv_TfExtendMinutes                = 10.0;
+bool   gv_WarnPluginMessages             = true;
 
 char   gv_Gamemode[64];
 char   gv_Game[64];
@@ -39,6 +40,7 @@ ConVar g_DisableMapVote;
 ConVar g_DisableAdminVoteKickProtection;
 ConVar g_DisableBackToLobbyProtection;
 ConVar g_TfExtendMinutes;
+ConVar g_WarnPluginMessages;
 
 void   ReadVariables()
 {
@@ -76,6 +78,9 @@ void   ReadVariables()
 
     gv_TfExtendMinutes = g_TfExtendMinutes.FloatValue;
     PrintToServer("[SourceVote] TF2 map extend minutes: %f", gv_TfExtendMinutes);
+
+    gv_WarnPluginMessages = g_WarnPluginMessages.BoolValue;
+    PrintToServer("[SourceVote] Warn plugin messages disabled: %b", gv_WarnPluginMessages);
 }
 
 bool gvf_Hooked_L4D2_VersusMatchFinished   = false;
@@ -706,6 +711,17 @@ public void OnPluginStart()
         0.0      // max value
     );
 
+    g_WarnPluginMessages = CreateConVar(
+        "sourceVoteWarnPluginMessages",
+        "1",    // default value
+        "Warn players with cl_showpluginmessages disabled that they won't see vote messages",
+        FCVAR_NONE,
+        true,    // has min
+        0.0,     // min value
+        true,    // has max
+        1.0      // max value
+    );
+
     AddCommandListener(Vote_Print, "callvote");
 
     ReadVariables();
@@ -722,6 +738,31 @@ public void OnPluginStart()
 public void OnMapStart()
 {
     gv_NMRIH_IsPracticing = true;
+}
+
+public void OnClientPutInServer(int client)
+{
+    WarnShowPluginMessagesDisabled(client);
+}
+
+void WarnShowPluginMessagesDisabled(int client)
+{
+    if (!gv_WarnPluginMessages || client == 0 || IsFakeClient(client))
+        return;
+
+    QueryClientConVar(client, "cl_showpluginmessages", OnShowPluginMessagesQueried);
+}
+
+public void OnShowPluginMessagesQueried(QueryCookie cookie, int client, ConVarQueryResult result, const char[] cvarName, const char[] cvarValue)
+{
+    if (result != ConVarQuery_Okay || !IsClientInGame(client))
+        return;
+
+    if (StringToInt(cvarValue) == 0)
+    {
+        PrintToConsole(client, "[SourceVote] Your 'cl_showpluginmessages' is disabled, you won't see vote messages in chat. Type 'cl_showpluginmessages 1' in your console to enable them.");
+        PrintHintText(client, "[SourceVote] Your 'cl_showpluginmessages' is disabled, you won't see vote messages.\nType 'cl_showpluginmessages 1' in console to enable them.");
+    }
 }
 
 public OnServerEnterHibernation()
@@ -1408,6 +1449,8 @@ public void InitMapVote()
     {
         int client = onlinePlayers[i];
         if (client == 0) break;
+
+        WarnShowPluginMessagesDisabled(client);
 
         Menu menu = new Menu(VoteMenuHandler);
         menu.SetTitle("Map Vote");
