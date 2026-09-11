@@ -15,6 +15,18 @@ int    gv_NMRIH_PlayerTokens[MAXPLAYERS];
 bool   gv_NMRIH_IsPracticing = true;
 Handle gv_VoteTimer          = null;
 
+// #region Griefing Vote (NMRIH)
+float  gv_NMRIH_KillTimestamps[MAXPLAYERS][2];
+bool   gv_GriefingVoteActive         = false;
+int    gv_GriefingVoteAccused        = 0;
+int    gv_GriefingVoteYesCount       = 0;
+Handle gv_GriefingVoteTimer          = null;
+bool   gv_DisableGriefingVote        = false;
+float  gv_GriefingKillWindowSeconds  = 120.0;
+int    gv_GriefingVoteSeconds        = 20;
+int    gv_GriefingBanMinutesPerVote  = 15;
+// #endregion Griefing Vote (NMRIH)
+
 int    gv_BanTargetMap[MAXPLAYERS];
 int    gv_KickTargetMap[MAXPLAYERS];
 int    gv_ReportTargetMap[MAXPLAYERS];
@@ -45,6 +57,10 @@ ConVar g_DisableAdminVoteKickProtection;
 ConVar g_DisableBackToLobbyProtection;
 ConVar g_TfExtendMinutes;
 ConVar g_WarnPluginMessages;
+ConVar g_DisableGriefingVote;
+ConVar g_GriefingKillWindowSeconds;
+ConVar g_GriefingVoteSeconds;
+ConVar g_GriefingBanMinutesPerVote;
 
 void   ReadVariables()
 {
@@ -88,6 +104,18 @@ void   ReadVariables()
 
     gv_WarnPluginMessages = g_WarnPluginMessages.BoolValue;
     PrintToServer("[SourceVote] Warn plugin messages disabled: %b", gv_WarnPluginMessages);
+
+    gv_DisableGriefingVote = g_DisableGriefingVote.BoolValue;
+    PrintToServer("[SourceVote] Griefing Vote is disabled: %b", gv_DisableGriefingVote);
+
+    gv_GriefingKillWindowSeconds = g_GriefingKillWindowSeconds.FloatValue;
+    PrintToServer("[SourceVote] Griefing Vote kill window seconds: %f", gv_GriefingKillWindowSeconds);
+
+    gv_GriefingVoteSeconds = g_GriefingVoteSeconds.IntValue;
+    PrintToServer("[SourceVote] Griefing Vote seconds: %d", gv_GriefingVoteSeconds);
+
+    gv_GriefingBanMinutesPerVote = g_GriefingBanMinutesPerVote.IntValue;
+    PrintToServer("[SourceVote] Griefing Vote ban minutes per yes vote: %d", gv_GriefingBanMinutesPerVote);
 }
 
 bool gvf_Hooked_L4D2_VersusMatchFinished   = false;
@@ -740,6 +768,50 @@ public void OnPluginStart()
         1.0      // max value
     );
 
+    g_DisableGriefingVote = CreateConVar(
+        "sourceVoteDisableGriefingVote",
+        "0",    // default value
+        "Disable the automatic griefing vote when a player kills 2 players in a short time (NMRIH)",
+        FCVAR_NONE,
+        true,    // has min
+        0.0,     // min value
+        true,    // has max
+        1.0      // max value
+    );
+
+    g_GriefingKillWindowSeconds = CreateConVar(
+        "sourceVoteGriefingKillWindowSeconds",
+        "120",    // default value
+        "Time window in seconds to detect 2 kills by the same player and trigger the griefing vote",
+        FCVAR_NONE,
+        true,    // has min
+        1.0,     // min value
+        false,   // has max
+        0.0      // max value
+    );
+
+    g_GriefingVoteSeconds = CreateConVar(
+        "sourceVoteGriefingVoteSeconds",
+        "20",    // default value
+        "Seconds players have to vote if the accused player was griefing",
+        FCVAR_NONE,
+        true,    // has min
+        1.0,     // min value
+        true,    // has max
+        999.0    // max value
+    );
+
+    g_GriefingBanMinutesPerVote = CreateConVar(
+        "sourceVoteGriefingBanMinutesPerVote",
+        "15",    // default value
+        "Ban minutes applied per 'yes' vote when a player is voted as griefing",
+        FCVAR_NONE,
+        true,    // has min
+        1.0,     // min value
+        false,   // has max
+        0.0      // max value
+    );
+
     AddCommandListener(Vote_Print, "callvote");
 
     ReadVariables();
@@ -830,6 +902,8 @@ public OnServerEnterHibernation()
     for (int i = 0; i < MAXPLAYERS; i++)
     {
         gv_NMRIH_IsDeadPlayer[i] = false;
+        gv_NMRIH_KillTimestamps[i][0] = 0.0;
+        gv_NMRIH_KillTimestamps[i][1] = 0.0;
     }
 
     if (gv_VoteTimer != null)
@@ -837,6 +911,15 @@ public OnServerEnterHibernation()
         KillTimer(gv_VoteTimer);
         gv_VoteTimer = null;
     }
+
+    if (gv_GriefingVoteTimer != null)
+    {
+        KillTimer(gv_GriefingVoteTimer);
+        gv_GriefingVoteTimer = null;
+    }
+    gv_GriefingVoteActive   = false;
+    gv_GriefingVoteAccused  = 0;
+    gv_GriefingVoteYesCount = 0;
 
     gv_NMRIH_IsPracticing = true;
 }
@@ -1065,8 +1148,8 @@ void ShowReasonMenu(int client)
     Menu menu = new Menu(MenuHandler_ReasonSelect);
     menu.SetTitle("Ban Reason:");
 
-    menu.AddItem("Cheating", "Cheating / Hacks");
-    menu.AddItem("Griefing", "Griefing / Trolling");
+    menu.AddItem("Cheating", "Cheating");
+    menu.AddItem("Griefing", "Griefingg");
     menu.AddItem("Harassment", "Harassment / Spam");
     menu.AddItem("Exploiting", "Exploiting / Bug Abuse");
     menu.AddItem("Unkown", "Unkown");
@@ -1397,6 +1480,33 @@ void ExecuteReport(int client, int reportedClient, const char[] reason)
 
     PrintToChat(client, "[SourceVote] Player reported. Reason: %s", reason);
 }
+
+void ExecuteAutoReport(int reportedClient, const char[] reason)
+{
+    if (!IsValidClient(reportedClient))
+        return;
+
+    char reportedName[MAX_NAME_LENGTH];
+    char reportedSteamId[32];
+    GetClientName(reportedClient, reportedName, sizeof(reportedName));
+    GetClientAuthId(reportedClient, AuthId_Steam2, reportedSteamId, sizeof(reportedSteamId), true);
+
+    Handle file;
+    if (!FileExists(gv_ReportPath))
+        file = OpenFile(gv_ReportPath, "w");
+    else
+        file = OpenFile(gv_ReportPath, "a");
+
+    if (file == INVALID_HANDLE)
+    {
+        PrintToServer("[SourceVote] Failed to open file: %s", gv_ReportPath);
+        PrintToServer("[SourceVote] FileExists=%d", FileExists(gv_ReportPath));
+        return;
+    }
+
+    WriteFileLine(file, "SourceVote (Auto):SERVER,%s:%s,%s", reportedName, reportedSteamId, reason);
+    CloseHandle(file);
+}
 // #endregion Report
 //
 // #endregion Commands
@@ -1466,6 +1576,10 @@ public void OnPlayerDeath(Event event, const char[] name, bool dontBroadcast)
 {
     int userid = event.GetInt("userid");
     int client = GetClientOfUserId(userid);
+
+    int attacker = GetClientOfUserId(event.GetInt("attacker"));
+    if (IsValidClient(attacker) && attacker != client)
+        RegisterNMRIHKill(attacker);
 
     if (client == 0)
         return;
@@ -1539,6 +1653,8 @@ public bool OnClientConnect(int client, char[] rejectmsg, int maxlen)
 public void OnClientDisconnect(int client)
 {
     gv_NMRIH_IsDeadPlayer[client] = false;
+    gv_NMRIH_KillTimestamps[client][0] = 0.0;
+    gv_NMRIH_KillTimestamps[client][1] = 0.0;
 }
 
 public void OnRoundBegin(Event event, const char[] name, bool dontBroadcast)
@@ -1546,12 +1662,153 @@ public void OnRoundBegin(Event event, const char[] name, bool dontBroadcast)
     gv_NMRIH_IsPracticing = false;
     if (gv_ShouldDebug)
         PrintToServer("[SourceVote-OnRoundBegin] Survival started, map vote enabled");
+
+    for (int i = 0; i < MAXPLAYERS; i++)
+    {
+        gv_NMRIH_KillTimestamps[i][0] = 0.0;
+        gv_NMRIH_KillTimestamps[i][1] = 0.0;
+    }
 }
 
 public void FunctionTest(Event event, const char[] name, bool dontBroadcast)
 {
     PrintToServer("!!!!!!!!!!!!!!!!!!!!!!! TEST map_complete");
 }
+
+// #region Griefing Vote
+void RegisterNMRIHKill(int attacker)
+{
+    if (gv_DisableGriefingVote)
+        return;
+
+    float now             = GetGameTime();
+    float previousKillTime = gv_NMRIH_KillTimestamps[attacker][1];
+
+    gv_NMRIH_KillTimestamps[attacker][0] = previousKillTime;
+    gv_NMRIH_KillTimestamps[attacker][1] = now;
+
+    // No previous kill registered yet, this is the first one in the window
+    if (previousKillTime <= 0.0)
+        return;
+
+    float elapsed = now - previousKillTime;
+    if (elapsed > gv_GriefingKillWindowSeconds)
+        return;
+
+    // Reset window so the same 2 kills don't retrigger the vote repeatedly
+    gv_NMRIH_KillTimestamps[attacker][0] = 0.0;
+    gv_NMRIH_KillTimestamps[attacker][1] = 0.0;
+
+    if (gv_ShouldDebug)
+        PrintToServer("[SourceVote] Client %d killed 2 players within %.1f seconds, triggering griefing vote", attacker, elapsed);
+
+    TriggerGriefingVote(attacker);
+}
+
+void TriggerGriefingVote(int accused)
+{
+    if (!IsValidClient(accused))
+        return;
+
+    ExecuteAutoReport(accused, "Auto-detected: killed 2 players in a short time");
+
+    if (gv_GriefingVoteActive)
+    {
+        if (gv_ShouldDebug)
+            PrintToServer("[SourceVote] Griefing Vote already active, ignoring new trigger for client %d", accused);
+        return;
+    }
+
+    gv_GriefingVoteActive   = true;
+    gv_GriefingVoteAccused  = accused;
+    gv_GriefingVoteYesCount = 0;
+
+    char accusedName[MAX_NAME_LENGTH];
+    GetClientName(accused, accusedName, sizeof(accusedName));
+    PrintToChatAll("[SourceVote] %s killed 2 players in a short time, vote if he was griefing!", accusedName);
+
+    ShowGriefingVoteMenu(accused, accusedName);
+
+    gv_GriefingVoteTimer = CreateTimer(float(gv_GriefingVoteSeconds + 1), FinishGriefingVote, 0, TIMER_FLAG_NO_MAPCHANGE);
+}
+
+void ShowGriefingVoteMenu(int accused, const char[] accusedName)
+{
+    char title[192];
+    Format(title, sizeof(title), "%s killed 2 players in a short time.\nWas he griefing?", accusedName);
+
+    for (int i = 1; i <= MaxClients; i++)
+    {
+        if (!IsClientInGame(i) || IsFakeClient(i) || i == accused)
+            continue;
+
+        Menu menu = new Menu(MenuHandler_GriefingVote);
+        menu.SetTitle(title);
+
+        menu.AddItem("yes", "Yes, he was griefing");
+        menu.AddItem("no", "No, it was an accident");
+
+        menu.ExitButton = true;
+        menu.Display(i, gv_GriefingVoteSeconds);
+    }
+}
+
+public int MenuHandler_GriefingVote(Menu menu, MenuAction action, int client, int param2)
+{
+    if (action == MenuAction_Select)
+    {
+        char info[8];
+        menu.GetItem(param2, info, sizeof(info));
+
+        if (gv_GriefingVoteActive && StrEqual(info, "yes"))
+        {
+            gv_GriefingVoteYesCount++;
+        }
+    }
+    else if (action == MenuAction_End)
+    {
+        delete menu;
+    }
+    return 0;
+}
+
+public Action FinishGriefingVote(Handle timer)
+{
+    gv_GriefingVoteTimer = null;
+
+    int accused  = gv_GriefingVoteAccused;
+    int yesCount = gv_GriefingVoteYesCount;
+
+    gv_GriefingVoteActive   = false;
+    gv_GriefingVoteAccused  = 0;
+    gv_GriefingVoteYesCount = 0;
+
+    if (yesCount <= 0)
+    {
+        if (gv_ShouldDebug)
+            PrintToServer("[SourceVote] Griefing Vote finished with no yes votes.");
+        return Plugin_Stop;
+    }
+
+    if (!IsValidClient(accused))
+    {
+        PrintToServer("[SourceVote] Griefing Vote finished but the accused player is no longer connected.");
+        return Plugin_Stop;
+    }
+
+    int banMinutes = yesCount * gv_GriefingBanMinutesPerVote;
+
+    char reason[128];
+    Format(reason, sizeof(reason), "Griefing vote: %d player(s) voted yes", yesCount);
+
+    BanClient(accused, banMinutes, BANFLAG_AUTO, reason, reason);
+    PrintToChatAll("[SourceVote] Player banned for %d minutes. Reason: %s", banMinutes, reason);
+
+    ExecuteAutoReport(accused, reason);
+
+    return Plugin_Stop;
+}
+// #endregion Griefing Vote
 // #endregion No More Room in Hell
 //
 // #endregion No More Room in Hell

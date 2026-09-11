@@ -43,6 +43,18 @@ To view userid you can use the command ``status`` in game console
 ### How it works
 - Plugin execute the command ``banid 0 "steamid..." kick`` to ban the player, and also include that command in ``sm_cvar sourceVoteBanFile "cfg/bans.cfg"``, but you will need to exec the cfg on ``server.cfg`` -> ``exec bans.cfg``
 
+## Griefing Vote (No More Room in Hell)
+When a player kills 2 other players in less than 2 minutes, a menu automatically pops up for every other online player asking if that player was griefing.
+
+Each "yes" vote stacks a temporary ban of ``sourceVoteGriefingBanMinutesPerVote`` (default 15) minutes, so 1 yes = 15 minutes, 2 yes = 30 minutes, and so on. The event is also automatically appended to ``sourceVoteReportFile`` regardless of the vote outcome.
+
+To disable exec ``sm_cvar sourceVoteDisableGriefingVote 1``
+
+### How it works
+- The plugin listens to ``player_death`` and tracks the last 2 kill timestamps per attacker.
+- If those 2 kills happened within ``sourceVoteGriefingKillWindowSeconds`` (default 120) seconds, an entry is written to the report file and a Yes/No menu is shown to every other online player for ``sourceVoteGriefingVoteSeconds`` (default 20) seconds.
+- After the vote ends, if there is at least 1 "yes" vote, the accused player is banned for ``yesVotes * sourceVoteGriefingBanMinutesPerVote`` minutes using SourceMod's ban system, and the applied ban is logged to the report file as well.
+
 ## CVARS
 - sourceVoteDebug
 - > Enable debug logging
@@ -50,6 +62,8 @@ To view userid you can use the command ``status`` in game console
 - > Vote file path
 - sourceVoteBanFile
 - > Ban file path
+- sourceVoteReportFile
+- > Report file path
 - sourceVoteSecondsToVote
 - > Seconds to vote for a map
 - sourceVoteDisableMapVote
@@ -58,6 +72,14 @@ To view userid you can use the command ``status`` in game console
 - > Disable admin vote kick protection
 - sourceVoteDisableBackToLobbyProtection
 - > Disable back to lobby and restart campaign protection
+- sourceVoteDisableGriefingVote
+- > Disable the automatic griefing vote (NMRIH)
+- sourceVoteGriefingKillWindowSeconds
+- > Time window in seconds to detect 2 kills by the same player
+- sourceVoteGriefingVoteSeconds
+- > Seconds players have to vote if the accused was griefing
+- sourceVoteGriefingBanMinutesPerVote
+- > Ban minutes applied per "yes" vote
 
 ## Requirements
 - Sourcemod and metamod
