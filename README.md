@@ -9,7 +9,7 @@ Creates map vote system when coop/versus/survival/survivalversus ends
 - ``sm_cvar sourceVoteVoteFile "addons/sourcemod/configs/source_vote.cfg"`` change the vote file.
 - ``sm_cvar sourceVoteSecondsToVote 10`` change the seconds to vote for a map.
 
-To disable exec ``sm_cvar sourceVoteDisableMapVote 1``
+To disable: ``sm_cvar sourceVoteDisableMapVote 1``
 
 ### How it works
 - After the end of the round the server will ask for a map vote, the maps to vote is randomly selected between the map list.
@@ -43,12 +43,29 @@ To view userid you can use the command ``status`` in game console
 ### How it works
 - Plugin execute the command ``banid 0 "steamid..." kick`` to ban the player, and also include that command in ``sm_cvar sourceVoteBanFile "cfg/bans.cfg"``, but you will need to exec the cfg on ``server.cfg`` -> ``exec bans.cfg``
 
+## Kick
+``!startkick <userid> <"Griefing">`` command to kick players with given userid, a menu is also available by using only ``!startkick``
+
+The command requires the admin flag: "c"
+
+To view userid you can use the command ``status`` in game console
+
+### How it works
+- Plugin execute ``KickClient`` on the target player with the given reason
+
+## Report
+``!report`` opens a menu for any player to report another player, the report is appended to ``sm_cvar sourceVoteReportFile "cfg/reports.cfg"``.
+
+A chat reminder about the ``!report`` command is broadcast every ``sourceVoteReportReminderMinutes`` (default 30) minutes.
+
+To disable the reminder: ``sm_cvar sourceVoteDisableReportReminder 1``
+
 ## Griefing Vote (No More Room in Hell)
 When a player kills 2 other players in less than 2 minutes, a menu automatically pops up for every other online player asking if that player was griefing.
 
 Each "yes" vote stacks a temporary ban of ``sourceVoteGriefingBanMinutesPerVote`` (default 15) minutes, so 1 yes = 15 minutes, 2 yes = 30 minutes, and so on. The event is also automatically appended to ``sourceVoteReportFile`` regardless of the vote outcome.
 
-To disable exec ``sm_cvar sourceVoteDisableGriefingVote 1``
+To disable: ``sm_cvar sourceVoteDisableGriefingVote 1``
 
 ### How it works
 - The plugin listens to ``player_death`` and tracks the last 2 kill timestamps per attacker.
@@ -64,6 +81,10 @@ To disable exec ``sm_cvar sourceVoteDisableGriefingVote 1``
 - > Ban file path
 - sourceVoteReportFile
 - > Report file path
+- sourceVoteDisableReportReminder
+- > Disable the periodic !report chat reminder
+- sourceVoteReportReminderMinutes
+- > Minutes between !report chat reminders
 - sourceVoteSecondsToVote
 - > Seconds to vote for a map
 - sourceVoteDisableMapVote
@@ -86,15 +107,13 @@ To disable exec ``sm_cvar sourceVoteDisableGriefingVote 1``
 
 ## Usage
 1. Download the plugin from the latest release:
-[Releases Section](https://github.com/LeandroTheDev/source_vote/releases)
+[Releases Section](https://github.com/LeansBoboDev/source_vote/releases)
 
 2. Place the compiled .smx file into the following folder on your server: addons/sourcemod/plugins/
 
 3. Map configuration can be found on addons/sourcemod/configs/source_vote.cfg, (After first run)
 
-4. (Left 4 Dead 2 Survival Servers) Add to server.cfg: ``sm_cvar sv_pz_endgame_vote_post_period 30``, for survival versus and versus vote system work propertly
-
-5. Run the server
+4. Run the server
 
 ## Compiling
 

@@ -43,6 +43,9 @@ bool   gv_DisableAdminVoteKickProtection = false;
 bool   gv_DisableBackToLobbyProtection   = false;
 float  gv_TfExtendMinutes                = 10.0;
 bool   gv_WarnPluginMessages             = true;
+bool   gv_DisableReportReminder          = false;
+int    gv_ReportReminderMinutes          = 30;
+Handle gv_ReportReminderTimer            = null;
 
 char   gv_Gamemode[64];
 char   gv_Game[64];
@@ -61,6 +64,8 @@ ConVar g_DisableGriefingVote;
 ConVar g_GriefingKillWindowSeconds;
 ConVar g_GriefingVoteSeconds;
 ConVar g_GriefingBanMinutesPerVote;
+ConVar g_DisableReportReminder;
+ConVar g_ReportReminderMinutes;
 
 void   ReadVariables()
 {
@@ -116,6 +121,34 @@ void   ReadVariables()
 
     gv_GriefingBanMinutesPerVote = g_GriefingBanMinutesPerVote.IntValue;
     PrintToServer("[SourceVote] Griefing Vote ban minutes per yes vote: %d", gv_GriefingBanMinutesPerVote);
+
+    gv_DisableReportReminder = g_DisableReportReminder.BoolValue;
+    PrintToServer("[SourceVote] Report reminder is disabled: %b", gv_DisableReportReminder);
+
+    gv_ReportReminderMinutes = g_ReportReminderMinutes.IntValue;
+    PrintToServer("[SourceVote] Report reminder minutes: %d", gv_ReportReminderMinutes);
+
+    StartReportReminderTimer();
+}
+
+void StartReportReminderTimer()
+{
+    if (gv_ReportReminderTimer != null)
+    {
+        KillTimer(gv_ReportReminderTimer);
+        gv_ReportReminderTimer = null;
+    }
+
+    if (gv_DisableReportReminder || gv_ReportReminderMinutes <= 0)
+        return;
+
+    gv_ReportReminderTimer = CreateTimer(float(gv_ReportReminderMinutes * 60), ReportReminderTimer, 0, TIMER_REPEAT);
+}
+
+public Action ReportReminderTimer(Handle timer)
+{
+    PrintToChatAll("[SourceVote] Use !report to report a player that is misbehaving.");
+    return Plugin_Continue;
 }
 
 bool gvf_Hooked_L4D2_VersusMatchFinished   = false;
@@ -812,6 +845,28 @@ public void OnPluginStart()
         0.0      // max value
     );
 
+    g_DisableReportReminder = CreateConVar(
+        "sourceVoteDisableReportReminder",
+        "0",    // default value
+        "Disable the periodic chat reminder about the !report command",
+        FCVAR_NONE,
+        true,    // has min
+        0.0,     // min value
+        true,    // has max
+        1.0      // max value
+    );
+
+    g_ReportReminderMinutes = CreateConVar(
+        "sourceVoteReportReminderMinutes",
+        "30",    // default value
+        "Minutes between chat reminders telling players about the !report command",
+        FCVAR_NONE,
+        true,    // has min
+        1.0,     // min value
+        false,   // has max
+        0.0      // max value
+    );
+
     AddCommandListener(Vote_Print, "callvote");
 
     ReadVariables();
@@ -845,13 +900,13 @@ public Action OnClientSayCommand(int client, const char[] command, const char[] 
     strcopy(text, sizeof(text), sArgs);
     TrimString(text);
 
-    if (StrEqual(text, "!report", false) || StrEqual(text, "/report", false))
+    if (StrEqual(text, "!report", false))
     {
         ShowReportPlayerMenu(client);
         return Plugin_Handled;
     }
 
-    if (StrEqual(text, "!startban", false) || StrEqual(text, "/startban", false))
+    if (StrEqual(text, "!startban", false))
     {
         if (!CheckCommandAccess(client, "sm_startban", ADMFLAG_BAN))
         {
@@ -863,7 +918,7 @@ public Action OnClientSayCommand(int client, const char[] command, const char[] 
         return Plugin_Handled;
     }
 
-    if (StrEqual(text, "!startkick", false) || StrEqual(text, "/startkick", false))
+    if (StrEqual(text, "!startkick", false))
     {
         if (!CheckCommandAccess(client, "sm_startkick", ADMFLAG_KICK))
         {
