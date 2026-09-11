@@ -17,12 +17,14 @@ Handle gv_VoteTimer          = null;
 
 int    gv_BanTargetMap[MAXPLAYERS];
 int    gv_KickTargetMap[MAXPLAYERS];
+int    gv_ReportTargetMap[MAXPLAYERS];
 bool   gv_ShouldDebug = false;
 int    gv_MapCount    = 0;
 char   gv_MapCodes[99][64];
 char   gv_MapNames[99][64];
 char   gv_BanPath[PLATFORM_MAX_PATH];
 char   gv_VotePath[PLATFORM_MAX_PATH];
+char   gv_ReportPath[PLATFORM_MAX_PATH];
 int    gv_SecondsToVote                  = 10;
 bool   gv_DisableMapVote                 = false;
 bool   gv_DisableAdminVoteKickProtection = false;
@@ -36,6 +38,7 @@ char   gv_Game[64];
 ConVar g_ShouldDebug;
 ConVar g_VotePath;
 ConVar g_BanFilePath;
+ConVar g_ReportFilePath;
 ConVar g_SecondsToVote;
 ConVar g_DisableMapVote;
 ConVar g_DisableAdminVoteKickProtection;
@@ -53,6 +56,9 @@ void   ReadVariables()
 
     g_BanFilePath.GetString(gv_BanPath, sizeof(gv_BanPath));
     PrintToServer("[SourceVote] Using ban file: %s", gv_BanPath);
+
+    g_ReportFilePath.GetString(gv_ReportPath, sizeof(gv_ReportPath));
+    PrintToServer("[SourceVote] Using report file: %s", gv_ReportPath);
 
     gv_SecondsToVote = g_SecondsToVote.IntValue;
     PrintToServer("[SourceVote] Seconds to Vote: %d", gv_SecondsToVote);
@@ -657,6 +663,17 @@ public void OnPluginStart()
         0.0       // max value
     );
 
+    g_ReportFilePath = CreateConVar(
+        "sourceVoteReportFile",
+        "cfg/reports.cfg",    // default value
+        "Report File",
+        FCVAR_NONE,
+        false,    // has min
+        0.0,      // min value
+        false,    // has max
+        0.0       // max value
+    );
+
     g_SecondsToVote = CreateConVar(
         "sourceVoteSecondsToVote",
         "10",    // default value
@@ -732,6 +749,7 @@ public void OnPluginStart()
     RegConsoleCmd("startban", CommandBan, "Ban someone");
     RegConsoleCmd("startkick", CommandKick, "Kick someone");
     RegConsoleCmd("sourcevotereload", CommandSourceVoteReload, "Reload Cvars and Configs");
+    RegConsoleCmd("report", CommandReport, "Report a player");
 
     PrintToServer("[SourceVote] initialized");
 }
@@ -744,6 +762,48 @@ public void OnMapStart()
 public void OnClientPutInServer(int client)
 {
     WarnShowPluginMessagesDisabled(client);
+}
+
+public Action OnClientSayCommand(int client, const char[] command, const char[] sArgs)
+{
+    if (!IsValidClient(client))
+        return Plugin_Continue;
+
+    char text[64];
+    strcopy(text, sizeof(text), sArgs);
+    TrimString(text);
+
+    if (StrEqual(text, "!report", false) || StrEqual(text, "/report", false))
+    {
+        ShowReportPlayerMenu(client);
+        return Plugin_Handled;
+    }
+
+    if (StrEqual(text, "!startban", false) || StrEqual(text, "/startban", false))
+    {
+        if (!CheckCommandAccess(client, "sm_startban", ADMFLAG_BAN))
+        {
+            PrintToChat(client, "[ERROR] Only admins can use this command.");
+            return Plugin_Handled;
+        }
+
+        ShowPlayerSelectMenu(client);
+        return Plugin_Handled;
+    }
+
+    if (StrEqual(text, "!startkick", false) || StrEqual(text, "/startkick", false))
+    {
+        if (!CheckCommandAccess(client, "sm_startkick", ADMFLAG_KICK))
+        {
+            PrintToChat(client, "[ERROR] Only admins can use this command.");
+            return Plugin_Handled;
+        }
+
+        ShowPlayerSelectMenuKick(client);
+        return Plugin_Handled;
+    }
+
+    return Plugin_Continue;
 }
 
 void WarnShowPluginMessagesDisabled(int client)
@@ -1206,6 +1266,138 @@ void ExecuteKick(int client, int kickedClient, const char[] reason)
     PrintToChat(client, "[SourceVote] Player kicked. Reason: %s", reason);
 }
 // #endregion Kick
+
+// #region Report
+public Action CommandReport(int client, int args)
+{
+    if (client == 0)
+        return Plugin_Stop;
+    if (!IsValidClient(client))
+        return Plugin_Stop;
+
+    ShowReportPlayerMenu(client);
+    return Plugin_Handled;
+}
+
+void ShowReportPlayerMenu(int client)
+{
+    Menu menu = new Menu(MenuHandler_ReportPlayerSelect);
+    menu.SetTitle("Select player to report:");
+
+    for (int i = 1; i <= MaxClients; i++)
+    {
+        if (!IsClientInGame(i) || IsFakeClient(i) || i == client)
+            continue;
+
+        char name[MAX_NAME_LENGTH];
+        char userId[16];
+        GetClientName(i, name, sizeof(name));
+        IntToString(GetClientUserId(i), userId, sizeof(userId));
+
+        menu.AddItem(userId, name);
+    }
+
+    if (menu.ItemCount == 0)
+    {
+        PrintToChat(client, "[SourceVote] No avaible players to report.");
+        delete menu;
+        return;
+    }
+
+    menu.ExitButton = true;
+    menu.Display(client, MENU_TIME_FOREVER);
+}
+
+void MenuHandler_ReportPlayerSelect(Menu menu, MenuAction action, int client, int param2)
+{
+    if (action == MenuAction_Select)
+    {
+        char userId[16];
+        menu.GetItem(param2, userId, sizeof(userId));
+
+        int reportedClient = GetClientOfUserId(StringToInt(userId));
+        if (reportedClient == 0 || !IsValidClient(reportedClient))
+        {
+            PrintToChat(client, "[SourceVote] Player not found.");
+        }
+
+        gv_ReportTargetMap[client] = reportedClient;
+        ShowReportReasonMenu(client);
+    }
+    else if (action == MenuAction_End)
+    {
+        delete menu;
+    }
+}
+
+void ShowReportReasonMenu(int client)
+{
+    Menu menu = new Menu(MenuHandler_ReportReasonSelect);
+    menu.SetTitle("Report Reason:");
+
+    menu.AddItem("Cheater", "Cheater");
+    menu.AddItem("Griefing", "Griefing");
+    menu.AddItem("Toxic", "Toxic");
+
+    menu.ExitButton = true;
+    menu.Display(client, MENU_TIME_FOREVER);
+}
+
+void MenuHandler_ReportReasonSelect(Menu menu, MenuAction action, int client, int param2)
+{
+    if (action == MenuAction_Select)
+    {
+        char reason[32];
+        menu.GetItem(param2, reason, sizeof(reason));
+
+        int reportedClient = gv_ReportTargetMap[client];
+        if (!IsValidClient(reportedClient))
+        {
+            PrintToChat(client, "[SourceVote] Invalid player.");
+        }
+        else
+        {
+            gv_ReportTargetMap[client] = 0;
+            ExecuteReport(client, reportedClient, reason);
+        }
+    }
+    else if (action == MenuAction_End)
+    {
+        delete menu;
+    }
+}
+
+void ExecuteReport(int client, int reportedClient, const char[] reason)
+{
+    char reportingName[MAX_NAME_LENGTH];
+    char reportingSteamId[32];
+    GetClientName(client, reportingName, sizeof(reportingName));
+    GetClientAuthId(client, AuthId_Steam2, reportingSteamId, sizeof(reportingSteamId), true);
+
+    char reportedName[MAX_NAME_LENGTH];
+    char reportedSteamId[32];
+    GetClientName(reportedClient, reportedName, sizeof(reportedName));
+    GetClientAuthId(reportedClient, AuthId_Steam2, reportedSteamId, sizeof(reportedSteamId), true);
+
+    Handle file;
+    if (!FileExists(gv_ReportPath))
+        file = OpenFile(gv_ReportPath, "w");
+    else
+        file = OpenFile(gv_ReportPath, "a");
+
+    if (file == INVALID_HANDLE)
+    {
+        PrintToServer("[SourceVote] Failed to open file: %s", gv_ReportPath);
+        PrintToServer("[SourceVote] FileExists=%d", FileExists(gv_ReportPath));
+        return;
+    }
+
+    WriteFileLine(file, "%s:%s,%s:%s,%s", reportingName, reportingSteamId, reportedName, reportedSteamId, reason);
+    CloseHandle(file);
+
+    PrintToChat(client, "[SourceVote] Player reported. Reason: %s", reason);
+}
+// #endregion Report
 //
 // #endregion Commands
 //
