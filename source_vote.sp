@@ -6,7 +6,7 @@ public Plugin myinfo =
     name        = "Source Vote",
     author      = "LeansBoboDev",
     description = "Player vote system",
-    version     = "2.0",
+    version     = "2.1",
     url         = "https://github.com/LeansBoboDev/source_vote"
 };
 
@@ -17,14 +17,14 @@ Handle gv_VoteTimer          = null;
 
 // #region Griefing Vote (NMRIH)
 float  gv_NMRIH_KillTimestamps[MAXPLAYERS][2];
-bool   gv_GriefingVoteActive         = false;
-int    gv_GriefingVoteAccused        = 0;
-int    gv_GriefingVoteYesCount       = 0;
-Handle gv_GriefingVoteTimer          = null;
-bool   gv_DisableGriefingVote        = false;
-float  gv_GriefingKillWindowSeconds  = 120.0;
-int    gv_GriefingVoteSeconds        = 20;
-int    gv_GriefingBanMinutesPerVote  = 15;
+bool   gv_GriefingVoteActive        = false;
+int    gv_GriefingVoteAccused       = 0;
+int    gv_GriefingVoteYesCount      = 0;
+Handle gv_GriefingVoteTimer         = null;
+bool   gv_DisableGriefingVote       = false;
+float  gv_GriefingKillWindowSeconds = 120.0;
+int    gv_GriefingVoteSeconds       = 20;
+int    gv_GriefingBanMinutesPerVote = 15;
 // #endregion Griefing Vote (NMRIH)
 
 int    gv_BanTargetMap[MAXPLAYERS];
@@ -151,20 +151,21 @@ public Action ReportReminderTimer(Handle timer)
     return Plugin_Continue;
 }
 
-bool gvf_Hooked_L4D2_VersusMatchFinished   = false;
-bool gvf_Hooked_L4D2_RoundEndSurvival      = false;
-bool gvf_Hooked_L4D2_VersusRematchStart    = false;
-bool gvf_Hooked_L4D2_FinaleStart           = false;
+bool gvf_Hooked_L4D2_VersusMatchFinished    = false;
+bool gvf_Hooked_L4D2_RoundEndSurvival       = false;
+bool gvf_Hooked_L4D2_VersusRematchStart     = false;
+bool gvf_Hooked_L4D2_FinaleStart            = false;
 bool gvf_Hooked_L4D2_SurvivalVersusRoundEnd = false;
-bool gvf_Hooked_NMRIH_PlayerDeath          = false;
-bool gvf_Hooked_NMRIH_PlayerSpawn          = false;
-bool gvf_Hooked_NMRIH_ExtractionComplete   = false;
-bool gvf_Hooked_NMRIH_TokenEarned          = false;
-bool gvf_Hooked_NMRIH_MapComplete          = false;
-bool gvf_Hooked_NMRIH_RoundBegin        = false;
-bool gvf_Hooked_TF_MapTimeRemaining        = false;
-int  gv_SurvivalVersus_RoundCount          = 0;
-bool gv_TF_VoteTriggered                  = false;
+bool gvf_Hooked_NMRIH_PlayerDeath           = false;
+bool gvf_Hooked_NMRIH_PlayerSpawn           = false;
+bool gvf_Hooked_NMRIH_ExtractionComplete    = false;
+bool gvf_Hooked_NMRIH_ExtractionExpire     = false;
+bool gvf_Hooked_NMRIH_TokenEarned           = false;
+bool gvf_Hooked_NMRIH_MapComplete           = false;
+bool gvf_Hooked_NMRIH_RoundBegin            = false;
+bool gvf_Hooked_TF_MapTimeRemaining         = false;
+int  gv_SurvivalVersus_RoundCount           = 0;
+bool gv_TF_VoteTriggered                    = false;
 void ReadConfigs()
 {
     // #region Default Configuration Creation
@@ -584,6 +585,7 @@ void ReadConfigs()
         SafeUnhook("player_death", OnPlayerDeath, EventHookMode_Post, gvf_Hooked_NMRIH_PlayerDeath);
         SafeUnhook("player_spawn", OnPlayerSpawn, EventHookMode_Post, gvf_Hooked_NMRIH_PlayerSpawn);
         SafeUnhook("extraction_complete", RoundEndBasic, EventHookMode_Post, gvf_Hooked_NMRIH_ExtractionComplete);
+        SafeUnhook("extraction_expire", RoundEndBasic, EventHookMode_Post, gvf_Hooked_NMRIH_ExtractionExpire);
         SafeUnhook("token_earned", OnPlayerReceiveToken, EventHookMode_Post, gvf_Hooked_NMRIH_TokenEarned);
         SafeUnhook("map_complete", FunctionTest, EventHookMode_Post, gvf_Hooked_NMRIH_MapComplete);
         SafeUnhook("nmrih_round_begin", OnRoundBegin, EventHookMode_Post, gvf_Hooked_NMRIH_RoundBegin);
@@ -620,6 +622,7 @@ void ReadConfigs()
             SafeHook("player_death", OnPlayerDeath, EventHookMode_Post, gvf_Hooked_NMRIH_PlayerDeath);
             SafeHook("player_spawn", OnPlayerSpawn, EventHookMode_Post, gvf_Hooked_NMRIH_PlayerSpawn);
             SafeHook("extraction_complete", RoundEndBasic, EventHookMode_Post, gvf_Hooked_NMRIH_ExtractionComplete);
+            SafeHook("extraction_expire", RoundEndBasic, EventHookMode_Post, gvf_Hooked_NMRIH_ExtractionExpire);
             SafeHook("token_earned", OnPlayerReceiveToken, EventHookMode_Post, gvf_Hooked_NMRIH_TokenEarned);
             SafeHook("map_complete", FunctionTest, EventHookMode_Post, gvf_Hooked_NMRIH_MapComplete);
             SafeHook("nmrih_round_begin", OnRoundBegin, EventHookMode_Post, gvf_Hooked_NMRIH_RoundBegin);
@@ -632,16 +635,6 @@ void ReadConfigs()
     // #endregion Map Vote
 
     // #region Protections
-    if (gv_DisableAdminVoteKickProtection == false)
-    {
-        PrintToServer("[SourceVote] vote kick protection for admins is enabled");
-        AddCommandListener(Votekick_Protection, "callvote");
-    }
-    if (gv_DisableBackToLobbyProtection == false)
-    {
-        PrintToServer("[SourceVote] vote back to lobby and restart campaign protection is enabled");
-        AddCommandListener(Votebacktolobby_Protection, "callvote");
-    }
     // #endregion Protections
 }
 
@@ -784,10 +777,10 @@ public void OnPluginStart()
         "10",    // default value
         "Minutes added to mp_timelimit when TF2 players vote to keep the current map",
         FCVAR_NONE,
-        true,    // has min
-        0.0,     // min value
-        false,   // has max
-        0.0      // max value
+        true,     // has min
+        0.0,      // min value
+        false,    // has max
+        0.0       // max value
     );
 
     g_WarnPluginMessages = CreateConVar(
@@ -817,10 +810,10 @@ public void OnPluginStart()
         "120",    // default value
         "Time window in seconds to detect 2 kills by the same player and trigger the griefing vote",
         FCVAR_NONE,
-        true,    // has min
-        1.0,     // min value
-        false,   // has max
-        0.0      // max value
+        true,     // has min
+        1.0,      // min value
+        false,    // has max
+        0.0       // max value
     );
 
     g_GriefingVoteSeconds = CreateConVar(
@@ -839,10 +832,10 @@ public void OnPluginStart()
         "15",    // default value
         "Ban minutes applied per 'yes' vote when a player is voted as griefing",
         FCVAR_NONE,
-        true,    // has min
-        1.0,     // min value
-        false,   // has max
-        0.0      // max value
+        true,     // has min
+        1.0,      // min value
+        false,    // has max
+        0.0       // max value
     );
 
     g_DisableReportReminder = CreateConVar(
@@ -861,13 +854,15 @@ public void OnPluginStart()
         "30",    // default value
         "Minutes between chat reminders telling players about the !report command",
         FCVAR_NONE,
-        true,    // has min
-        1.0,     // min value
-        false,   // has max
-        0.0      // max value
+        true,     // has min
+        1.0,      // min value
+        false,    // has max
+        0.0       // max value
     );
 
     AddCommandListener(Vote_Print, "callvote");
+    AddCommandListener(Votekick_Protection, "callvote");
+    AddCommandListener(Votebacktolobby_Protection, "callvote");
 
     ReadVariables();
     ReadConfigs();
@@ -889,48 +884,6 @@ public void OnMapStart()
 public void OnClientPutInServer(int client)
 {
     WarnShowPluginMessagesDisabled(client);
-}
-
-public Action OnClientSayCommand(int client, const char[] command, const char[] sArgs)
-{
-    if (!IsValidClient(client))
-        return Plugin_Continue;
-
-    char text[64];
-    strcopy(text, sizeof(text), sArgs);
-    TrimString(text);
-
-    if (StrEqual(text, "!report", false))
-    {
-        ShowReportPlayerMenu(client);
-        return Plugin_Handled;
-    }
-
-    if (StrEqual(text, "!startban", false))
-    {
-        if (!CheckCommandAccess(client, "sm_startban", ADMFLAG_BAN))
-        {
-            PrintToChat(client, "[ERROR] Only admins can use this command.");
-            return Plugin_Handled;
-        }
-
-        ShowPlayerSelectMenu(client);
-        return Plugin_Handled;
-    }
-
-    if (StrEqual(text, "!startkick", false))
-    {
-        if (!CheckCommandAccess(client, "sm_startkick", ADMFLAG_KICK))
-        {
-            PrintToChat(client, "[ERROR] Only admins can use this command.");
-            return Plugin_Handled;
-        }
-
-        ShowPlayerSelectMenuKick(client);
-        return Plugin_Handled;
-    }
-
-    return Plugin_Continue;
 }
 
 void WarnShowPluginMessagesDisabled(int client)
@@ -956,7 +909,7 @@ public OnServerEnterHibernation()
 {
     for (int i = 0; i < MAXPLAYERS; i++)
     {
-        gv_NMRIH_IsDeadPlayer[i] = false;
+        gv_NMRIH_IsDeadPlayer[i]      = false;
         gv_NMRIH_KillTimestamps[i][0] = 0.0;
         gv_NMRIH_KillTimestamps[i][1] = 0.0;
     }
@@ -976,7 +929,7 @@ public OnServerEnterHibernation()
     gv_GriefingVoteAccused  = 0;
     gv_GriefingVoteYesCount = 0;
 
-    gv_NMRIH_IsPracticing = true;
+    gv_NMRIH_IsPracticing   = true;
 }
 
 public Action Vote_Print(int client, const char[] command, int argc)
@@ -992,6 +945,9 @@ public Action Vote_Print(int client, const char[] command, int argc)
 
 public Action Votekick_Protection(int client, const char[] command, int argc)
 {
+    if (gv_DisableAdminVoteKickProtection)
+        return Plugin_Continue;
+
     char subcommand[64];
     char targetRaw[128];
     GetCmdArg(1, subcommand, sizeof(subcommand));
@@ -1034,6 +990,9 @@ public Action Votekick_Protection(int client, const char[] command, int argc)
 
 public Action Votebacktolobby_Protection(int client, const char[] command, int argc)
 {
+    if (gv_DisableBackToLobbyProtection)
+        return Plugin_Continue;
+
     char targetRaw[128];
     GetCmdArg(2, targetRaw, sizeof(targetRaw));
 
@@ -1629,8 +1588,8 @@ public void RoundEndSurvivalVersus(Event event, const char[] name, bool dontBroa
 // #region No More Room in Hell
 public void OnPlayerDeath(Event event, const char[] name, bool dontBroadcast)
 {
-    int userid = event.GetInt("userid");
-    int client = GetClientOfUserId(userid);
+    int userid   = event.GetInt("userid");
+    int client   = GetClientOfUserId(userid);
 
     int attacker = GetClientOfUserId(event.GetInt("attacker"));
     if (IsValidClient(attacker) && attacker != client)
@@ -1707,7 +1666,7 @@ public bool OnClientConnect(int client, char[] rejectmsg, int maxlen)
 
 public void OnClientDisconnect(int client)
 {
-    gv_NMRIH_IsDeadPlayer[client] = false;
+    gv_NMRIH_IsDeadPlayer[client]      = false;
     gv_NMRIH_KillTimestamps[client][0] = 0.0;
     gv_NMRIH_KillTimestamps[client][1] = 0.0;
 }
@@ -1736,8 +1695,8 @@ void RegisterNMRIHKill(int attacker)
     if (gv_DisableGriefingVote)
         return;
 
-    float now             = GetGameTime();
-    float previousKillTime = gv_NMRIH_KillTimestamps[attacker][1];
+    float now                            = GetGameTime();
+    float previousKillTime               = gv_NMRIH_KillTimestamps[attacker][1];
 
     gv_NMRIH_KillTimestamps[attacker][0] = previousKillTime;
     gv_NMRIH_KillTimestamps[attacker][1] = now;
@@ -1829,10 +1788,10 @@ public int MenuHandler_GriefingVote(Menu menu, MenuAction action, int client, in
 
 public Action FinishGriefingVote(Handle timer)
 {
-    gv_GriefingVoteTimer = null;
+    gv_GriefingVoteTimer    = null;
 
-    int accused  = gv_GriefingVoteAccused;
-    int yesCount = gv_GriefingVoteYesCount;
+    int accused             = gv_GriefingVoteAccused;
+    int yesCount            = gv_GriefingVoteYesCount;
 
     gv_GriefingVoteActive   = false;
     gv_GriefingVoteAccused  = 0;
@@ -1851,7 +1810,7 @@ public Action FinishGriefingVote(Handle timer)
         return Plugin_Stop;
     }
 
-    int banMinutes = yesCount * gv_GriefingBanMinutesPerVote;
+    int  banMinutes = yesCount * gv_GriefingBanMinutesPerVote;
 
     char reason[128];
     Format(reason, sizeof(reason), "Griefing vote: %d player(s) voted yes", yesCount);
@@ -2107,7 +2066,7 @@ public int VoteMenuHandler(Menu menu, MenuAction action, int client, int param)
 
 public Action VoteFinish(Handle timer)
 {
-    gv_VoteTimer = null;
+    gv_VoteTimer    = null;
 
     int maxVotes    = 0;
     int winnerIndex = -1;
